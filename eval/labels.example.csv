@@ -1,0 +1,6 @@
+rubric_version,sampler_seed,stratum,rank,opportunity_id,title,description,url,component,predicted_label,human_label,evidence_quote,adjudication_notes,example
+1.0,7,matched,1,example-1,Example provenance need,Example text requiring provenance.,https://example.invalid/1,interlock,fit,fit,requiring provenance,,true
+1.0,7,displayed-not-matched,2,example-2,Example payment need,Example text requesting spend authority.,https://example.invalid/2,permit,fit,fit,requesting spend authority,,true
+1.0,7,rejected-valid,3,example-3,Example construction need,Example text about concrete repair.,https://example.invalid/3,hermes-refuse,no-fit,no-fit,concrete repair,,true
+1.0,7,matched,4,example-4,Example red team need,Example text requesting adversarial testing.,https://example.invalid/4,adversarial-seat,fit,fit,adversarial testing,,true
+1.0,7,displayed-not-matched,5,example-5,Example AI context,Example text says AI but no assurance requirement.,https://example.invalid/5,exhibit,no-fit,no-fit,AI but no assurance requirement,,true

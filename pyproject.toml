@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "porcupine"
+version = "1.0.0"
+description = "Read-only Canada defence-assurance opportunity radar"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.setuptools]
+packages = ["porcupine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+

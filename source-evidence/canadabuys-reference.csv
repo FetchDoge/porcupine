@@ -1,0 +1,219 @@
+title-titre-eng,referenceNumber-numeroReference,solicitationNumber-numeroSollicitation,publicationDate-datePublication,tenderClosingDate-appelOffresDateCloture,tenderStatus-appelOffresStatut-eng,noticeURL-URLavis-eng,tenderDescription-descriptionAppelOffres-eng
+Secure Path to the Stars: Strengthening Cybersecurity in Hybrid Space Networks,cb-495-14096276,W7714-248676/011,2026-01-27,2026-03-10T14:00:00,Open,,"This Challenge notice is issued under the Innovation for Defence Excellence and Security (IDEaS) Program Call for Proposals (CFP) Call 006 (W7714-248676/A).
+
+Solicitation Documents reference: See bidding details section. 
+*For additional general information on the IDEaS Program, visit: 
+
+https://www.canada.ca/en/department-national-defence/programs/defence-ideas.html
+_____________
+This challenge is open to receive proposals for Component 1a, Component 1b and Component 2. Proposed solutions that fall within technology readiness levels (TRL) 1-9 can be submitted to this challenge.
+
+Steps to apply:
+Step 1: read this challenge
+Step 2: read the Call for Proposals : See bidding details section
+Step 3: propose your solution here : https://defence-innovation-portal.my.site.com/ 
+_____________
+Maximum Funding and Performance Period  
+
+Multiple contracts could result from this Challenge.  
+
+The individual maximum contract funding available under Component 1a (TRL 1-3) is up to $250,000 CAD (excluding applicable taxes) for a maximum performance period of up to 6 months.   
+The maximum individual contract funding available under Component 1b (TRL 4-5) is up to $1,500,000 CAD (excluding applicable taxes) for a maximum performance period of 12 months.  
+The maximum individual contract funding available under Component 2 (TRL 6-9) is up to $5,000,000 CAD (excluding applicable taxes). The period of performance will be determined at the time of contract negotiation.  
+The maximum individual contractual funding and the maximum performance period offered under Component 3 will be determined by Canada at the time of contract negotiation.  
+This disclosure is made in good faith and does not commit Canada to contract for the total approximate funding.  
+_____________
+Challenge Details
+
+Challenge Title: W7714-248676/011 – Secure Path to the Stars: Strengthening Cybersecurity in Hybrid Space Networks
+
+The Department of National Defence (DND) and the Canadian Armed Forces (CAF) re seeking innovative research and development (R&D) solutions to support the evolution of Hybrid Space Networks (HSNs) that are secure, resilient, and able to operate in contested environments.. As these HSNs will integrate communications, sensing, and command and control capabilities, the end-to-end cybersecurity will be key in providing secure operations and information flows to, from and between space-based and ground-based nodes.
+
+Background and Context
+
+Modern defence operations depend on the ability to collect, process and distribute large volumes of data from diverse sources in near real time. This capability is essential to ensure domain awareness and effective command and control.
+Low Earth Orbit (LEO) satellite constellations are expected to play a key role in meeting these requirements by enabling HSNs with high throughput, low latency, and global coverage. These networks must be able to adapt to changing dynamic traffic demands to transport data through different segments. HSN architectural robustness and resilience under dynamic traffic load and segment failure conditions are of particular importance.
+
+This challenge focuses on the creation of a laboratory-based “flatsat” platform—a ground-based satellite test system that integrates key satellite subsystems and enables controlled cybersecurity. The “flatsat” will  support the design, testing, and validation of secure satellite software and hardware architectures, as well as cyber defense mechanisms. 
+To enable a wide range of cybersecurity experiments, the flatsat should integrate multiple and type-diverse payloads , rather than the one or two payloads typically found on operational satellites.  Examples of payloads may include:
+
+•	Communication
+•	Remote observation
+•	Navigation
+•	Scientific measurements
+•	Weather and meteorology
+•	Any other type-specific payload or combination thereof
+
+As there are a variety of strategies and methods that could be proposed in meeting this challenge, DND/CAF is providing some guidance to Offerors based on experiences with flatsats:
+
+Examples of proposal types (Typical approximate budgets and timelines)	
+A flatsat that integrates five (5) or more payloads - Up to $1,250,000 and a length of 6-12 months
+A flatsat that integrates three (3) or four (4) payloads - Between $500,000 and $1,000,000	 and a length of 6-12 months
+A flatsat with  two (2) payloads - Between $100,000 and $400,000 and a length of 6-12 months
+
+Essential Outcomes
+
+Proposed solutions must deliver a flatsat platform that meets the following criteria:
+
+Function criteria
+
+•	Utilizes subsystems that replicate the full and proven functionality of those used in operational satellites
+•	Utilizes at least two (2) payloads, one of them being communications
+
+Fit criteria
+
+•	Will measure no more than 2.5m x 2.5m in a laboratory floor space
+•	Will feature a hardware layout that allows easy access for instrumentation and testing
+
+Form criteria
+
+•	Includes a telemetry, tracking, and command (TT&C) module accessible via a wired interface
+•	Includes communications payload accessible via a wired interface
+•	Implements a modular, reconfigurable and reprogrammable software architecture that supports software/firmware patching and hardware component replacement
+•	Provides administrative capabilities for health monitoring, bus input/output, configuration, and secure software updates via a wired interface
+
+Desired Outcomes
+
+Proposed solutions should include one or more of the following:
+•	Exploration of security concepts for hardening hybrid space networks.
+•	Development and demonstration of novel cybersecurity protection mechanisms.
+•	Creation of a remote-access environment to support cybersecurity competitions and training exercises
+•	Utilization of more than two (2) payloads. Each additional payload adds to the innovation and technical merits."
+RF Data Fusion for Command and Control,cb-846-73690703,W7714-248676/017,2026-09-10,2026-10-20T14:00:00,Open,,"This Challenge notice is issued under the Innovation for Defence Excellence and Security (IDEaS) Program Call for Proposals (CFP) Call 006 (W7714-248676/A).
+
+Solicitation Documents reference: See bidding details section. 
+
+*For additional general information on the IDEaS Program, visit: https://www.canada.ca/en/department-national-defence/programs/defence-ideas.html
+_____________
+This challenge is open to receive proposals for Component 1a, Component 1b and Component 2. Proposed solutions that fall within technology readiness levels (TRL) 1-9 can be submitted to this challenge.
+
+Steps to apply:
+
+Step 1: read this challenge
+Step 2: read the Call for Proposals : See bidding details section
+Step 3: propose your solution here : https://defence-innovation-portal.my.site.com/ 
+_____________
+Maximum Funding and Performance Period  
+
+Multiple contracts could result from this Challenge.  
+
+The individual maximum contract funding available under Component 1a (TRL 1-3) is up to $250,000 CAD (excluding applicable taxes) for a maximum performance period of up to 6 months.   
+
+The maximum individual contract funding available under Component 1b (TRL 4-5) is up to $1,500,000 CAD (excluding applicable taxes) for a maximum performance period of 12 months.  
+
+The maximum individual contract funding available under Component 2 (TRL 6-9) is up to $5,000,000 CAD (excluding applicable taxes). The period of performance will be determined at the time of contract negotiation.  
+
+The maximum individual contractual funding and the maximum performance period offered under Component 3 will be determined by Canada at the time of contract negotiation.  
+
+This disclosure is made in good faith and does not commit Canada to contract for the total approximate funding.  
+_____________
+Challenge Details
+
+Challenge Title: W7714-248676/017 - RF Data Fusion for Command and Control 
+
+The Department of National Defence (DND) and the Canadian Armed Forces (CAF) are seeking innovative software-based solutions to seamlessly convert, analyze, and fuse real-time, domain-specific, content-rich data transmitted over radio frequency (RF) bearers into a secure, standardized pan-domain Command and Control (C2) format to enhance interoperability and enable timely, data-driven decision-making across all domains and levels of command.  
+
+Background and context
+
+Radio frequency (RF) communications in military operations are inherently bandwidth-constrained and vulnerable to jamming, interference, and environmental effects, making them unreliable in contested environments. To maintain timely and effective support across all warfighting domains, data transmitted over RF bearers should be transformed into compact, structured messages, such as eXtensible Markup Language (XML)-based Message Text Formats (MTF) or other machine-readable schemas. Such messages should be optimized for transmission over tactical networks including Low Frequency (LF), Very Low Frequency (VLF), High Frequency (HF), Ultra High Frequency (UHF), and Satellite Communications (SATCOM). This approach enables resilient, standards-based communication across domains (land, air, maritime, cyber, and space) and functional services (e.g., Joint Intelligence Surveillance and Reconnaissance (JISR), medical, logistics), in line with doctrinal requirements for pan-domain operations. 
+
+CAF tactical messaging remains largely dependent on legacy systems. These systems are inflexible, poorly suited to machine-to-machine exchange, and increasingly misaligned with NATO’s shift toward XML-based, data-centric frameworks. CAF operators currently lack integrated, machine-readable messaging systems. As a result, they must manually convert voice, chat, and text inputs into formal military products including orders, situation reports, and Requests for Information (RFIs) to comply with command structures and coalition standards. 
+
+Modern, pan-domain operations require that doctrinal and technical Information Exchange Requirements (IERs) be met at the speed of operational relevance, with messaging that is interoperable, standardized, and capable of supporting real-time, data-driven decision-making in joint and coalition environments. As NATO, the U.S. Department of Defense, and other Five Eyes partners adopt XML-based, machine-readable messaging frameworks, the CAF is prioritizing alignment with these emerging data models to improve interoperability, operational agility, and mission effectiveness.  
+The DND/CAF are seeking innovative, interoperable, and scalable solutions that will contribute to the development of a next-generation digital military RF messaging and data exchange. Innovators are invited to propose technologies, platforms, or integrated systems.  
+
+Essential Outcomes  
+
+The proposed solution must:  
+
+•	Be a software-based capability (e.g., standalone application, plug-in, middleware, or service).  
+•	Support DND/CAF operations across all domains (land, air, maritime, space, cyber) and functional services (e.g., C2, intelligence, logistics).  
+•	Implement structured, standards-compliant messaging (e.g., MTF-XML) and data exchange protocols (e.g., National Information Exchange Model (NIEM), NATO Core Data Framework (NCDF)), with documented interfaces for importing, exporting, and exchanging data using those standards.
+•	Be configurable and modular, supporting Character-Oriented Information Exchange (COIE) processing and designed for future extensibility (e.g., to accommodate emerging or disruptive standards). 
+•	Provide documented interfaces and standards-based data exchange mechanisms to support system integration, including use within experimentation, simulation, and wargaming environments. 
+
+Desired Outcomes
+
+The proposed solution should include capabilities such as, but not limited to, the following: 
+
+•	Operability in Denied, Degraded, Intermittent, and Low Bandwidth (DDIL) environments, with scalability to support evolving mission requirements and force structures.  
+•	Enhanced user experience features such as intuitive interfaces, multilingual support, automation of routine workflows, and built-in decision aids. 
+•	Standardized, documented integration interfaces (e.g., application programming interfaces (APIs)) to enable integration with at least one Service Management or Service Monitoring tools or platforms (e.g., ServiceNow, Splunk, Dynatrace, Microsoft System Center, Azure Monitor, etc.). 
+•	Readiness for future integration of Artificial Intelligence (AI)/Machine Learning (ML) capabilities to support data fusion, intelligent message prioritization, and real-time decision support."
+Innovation for Defence Excellence and Security (IDEaS) Program – Competitive Projects – CFP 6 (W7714-248676A),WS5008404104-Doc5008404172,WS5008404104,2025-02-13,2027-03-31T14:00:00,Open,https://discovery.ariba.com/rfx/22342020?extsite=MjIzNDIwMjBfQU4wMTQ4NDA1MDk5Mg==,"Public Works and Government Services Canada (PWGSC) is issuing this Call for Proposals (CFP) on behalf of the Department of National Defence’s (DND) Innovation for Defence Excellence and Security (IDEaS) program, seeking innovative science and technology (S&T) solutions to Canada’s defence and security Challenges.
+
+ This CFP will be published on an ongoing basis for PWGSC to post DND Challenges. Challenges issued under this CFP will be published on an ongoing basis. Details related to each Challenge and their specific closing dates, which will form part of this CFP solicitation, will be posted under the CFP Event.
+
+ This CFP invites proposals for Component 1a, Component 1b and Component 2.
+
+ All information related to the Program, Proposal Submission, Evaluation Procedures, Basis of Selection, Evaluation Criteria, Resulting Contract Clauses, Certifications and Additional Information are contained in the CFP event and its amendments and attachments. Please direct all your questions regarding the CFP to the following email address: TPSGC.PAIDEES-APIDEAS.PWGSC@tpsgc-pwgsc.gc.ca"
+Open Construction Source List for CFB Halifax,MX-443841357513,AR26SLHX_86026,2026-01-23,2029-03-31T13:00:00,Open,https://www.merx.com/public/solicitations/3776296409/abstract?language=EN,"
+	Defence Construction Canada (DCC) is inviting contractors and suppliers to apply to be placed on an Open Construction Source List (OCSL) for commercial, residential, industrial, institutional, and civil work required by the Department of National Defence, at CFB Halifax (and its satellite sites in Nova Scotia) for three fiscal years (April 1, 2026, to March 31, 2029).
+	Interested contractors and suppliers may request to be placed on the OCSL at any time. However, DCC is requesting that interested contractors and suppliers submit a request to be placed the OCSL as soon as possible, preferably by March 4, 2026. DCC will require ten (10) business days to process an application for the OCSL.
+	Contractors and suppliers that want to be added to the OCSL, must submit a request through this MERX posting and therein indicate their preferred official language (English or French).
+	IMPORTANT: Contractors and suppliers that were placed on the previous OCSL (April 1, 2023, to March 31, 2026) must re-apply to be placed on the OCSL for April 1, 2026, to March 31, 2029.
+	The language selected by the applicant for this OCSL will be the only language used for the tender documents, the contract documents and communication for all future tenders and during the execution of any resulting contract. The language selected will apply for the duration of the OCSL.
+	Faxed, mailed, or emailed submissions will not be accepted. 
+	The OCSL will be used to tender construction services (commercial, residential, industrial, institutional, civil) with an estimated value of $10 million and below. As &quot;Opportunities to bid&quot; arise, DCC will invite all contractors and suppliers on the OCSL to bid on the work.
+	Contractors and suppliers will be invited electronically through MERX and may, at the discretion of DCC, be required to attend a site meeting prior to a tender closing. Tenders will close electronically through MERX.
+	Contractors and suppliers who apply to be placed on the OCSL will require an active MERX account to submit electronic bids. Please contact MERX for information on how to open or reactivate an account.
+	To bid on a tender call, a bidder must be registered on the OCSL used for the tender call. If the bidder&#39;s legal name does not appear on the OCSL, DCC may consider their bid to be non-compliant. If you change your business name, it is therefore very important that you notify DCC and consider making the change to your MERX account.
+	DCC reserves the right, at its sole discretion, to:
+	
+		Continue using existing source lists that may already be in place for similar or related services such as existing Quick Response Tender (QRT) source lists,
+		Establish other source lists for specific categories of construction services which may require different pre-qualification requirements, such as Quick Response Tender (QRT) source lists. Such other source lists will not be advertised through this OCSL. Such other source lists will be advertised openly on MERX on a case-by-case basis,
+		Verify which contractors have submitted bids under the OCSL, verify if those that did not submit bids are still interested to be on the OCSL and remove from the OCSL those contractors that are no longer interested,
+		Require additional pre-qualification requirements for any specific tenders done through the OCSL,
+		Elect to post any tender openly on MERX in lieu of this OCSL if DCC deems that an open tender would provide the potential for more competition,
+		Tenders may be set aside for Indigenous businesses in accordance with the Procurement Strategy for Indigenous Business (PSIB). In such cases, all contractors and suppliers on the Open Construction Source List (OCSL) will receive an invitation to bid; however, the MERX advertisement will clearly state that the opportunity is reserved for Indigenous businesses under PSIB. To qualify, the Indigenous business must be registered in Indigenous Services Canada&rsquo;s (ISC) Indigenous Business Directory (IBD). If you are forming a Joint Venture (JV) to bid on a contract set aside for Indigenous businesses, at least one member of the JV must be listed on the OCSL, and the Indigenous business within the JV must also be registered in ISC&rsquo;s Indigenous Business Directory. Failure to meet these requirements will result in the bid being deemed non-compliant,
+		Include a requirement for sub-contracting to Indigenous businesses that must be registered under Indigenous Services Canada&rsquo;s (ISC) Indigenous Business Directory. In this case, the MERX Ad specific to the invitation will clearly identify the inclusion of an Indigenous Benefits Plan (IBP).
+	
+	
+	Contractors are advised that contracts awarded by DCC include measurable performance standards and requirements as detailed in form DCL81-Performance Evaluation Guidelines which is available at https://www.dcc-cdc.gc.ca/industry/forms. A contractor that receives an unacceptable or failing score may be removed from this OCSL and receive no further invitations under the OCSL.
+	Contractors and suppliers are advised that all contracts tendered and awarded by DCC are subject to DCC&rsquo;s Procurement Code of Conduct which is available for download at https://www.dcc-cdc.gc.ca/industry/forms. A contractor or a supplier that has been declared ineligible or has been suspended by Public Services and Procurement Canada under its Ineligibility and Suspension Policy and the period of ineligibility or suspension has not expired may be removed from this OCSL and received no further invitations.
+	Contractors and suppliers are advised that DCC&rsquo;s Standard Construction Contract Documents - Electronic Bidding (DCL250) will be used for opportunities under the OCSL and can be downloaded from the DCC website at: https://www.dcc-cdc.gc.ca/industry/forms.
+	Contractors and suppliers are advised that tenders and contracts under this OCSL may contain organization and personnel security requirements. Typically, the organization security requirement will be Designated Organization Screening (DOS) and reliability status for personnel. However more stringent requirement may apply such as Facility Security Clearance (FSC) at the level of SECRET with approved Document Safeguarding (DSC) with secret clearance for personnel.
+	DCC may publish Advance Procurement Notices (APN) identifying potential tenders with anticipated security requirements to provide interested contractors an opportunity to begin the sponsorship request process for potentially obtaining the required security clearance(s) that are anticipated. The process to apply for a security clearance is provided in the APNs.
+	DCC reserves the right to reject any application that does not demonstrate, to the sole satisfaction of DCC, that the contractor or supplier has met the stated requirements. DCC also reserves the right to request clarifications and/or confirmations from any or all firms regarding any aspect of their submission information. A written response to each such communication is required from the firm.
+	By submitting a response to this invitation, contractors and suppliers are providing their consent, pursuant to section 30 of the Defence Production Act, for DCC to publicly disclose, after closing, their legal name, address and whether they have been included on the OCSL.
+	The OCSL may be used for procurements covered by trade agreements to which Canada is a party.
+	You have questions regarding the foregoing, or you wish to be removed from an OCSL, please contact:
+
+Defence Construction Canada
+Andr&eacute; Champagne
+Andre.Champagne@dcc-cdc.gc.caBidding and Documents are available on http://www.merx.com.  Fees may apply; See https://www.merx.com/public/pricing for more information."
+Open Construction Source List for 9 Wing Gander,MX-443841357514,AR26SLGR_86029,2026-01-23,2029-03-31T13:00:00,Open,https://www.merx.com/public/solicitations/3776296406/abstract?language=EN,"
+	Defence Construction Canada (DCC) is inviting contractors and suppliers to apply to be placed on an Open Construction Source List (OCSL) for commercial, residential, industrial, institutional, and civil work required by the Department of National Defence, at 9 Wing Gander (including but not limited to CFS St. John&rsquo;s, Stephenville, Corner Brook and Grand Falls-Windsor, Newfoundland and Labrador) for three fiscal years (April 1, 2026, to March 31, 2029).
+	Interested contractors and suppliers may request to be placed on the OCSL at any time. However, DCC is requesting that interested contractors and suppliers submit a request to be placed the OCSL as soon as possible, preferably by March 4, 2026. DCC will require ten (10) business days to process an application for the OCSL.
+	Contractors and suppliers that want to be added to the OCSL, must submit a request through this MERX posting and therein indicate their preferred official language (English or French).
+	IMPORTANT: Contractors and suppliers that were placed on the previous OCSL (April 1, 2023, to March 31, 2026) must re-apply to be placed on the OCSL for April 1, 2026, to March 31, 2029.
+	The language selected by the applicant for this OCSL will be the only language used for the tender documents, the contract documents and communication for all future tenders and during the execution of any resulting contract. The language selected will apply for the duration of the OCSL.
+	Faxed, mailed, or emailed submissions will not be accepted. 
+	The OCSL will be used to tender construction services (commercial, residential, industrial, institutional, civil) with an estimated value of $10 million and below. As &quot;Opportunities to bid&quot; arise, DCC will invite all contractors and suppliers on the OCSL to bid on the work.
+	Contractors and suppliers will be invited electronically through MERX and may, at the discretion of DCC, be required to attend a site meeting prior to a tender closing. Tenders will close electronically through MERX.
+	Contractors and suppliers who apply to be placed on the OCSL will require an active MERX account to submit electronic bids. Please contact MERX for information on how to open or reactivate an account.
+	To bid on a tender call, a bidder must be registered on the OCSL used for the tender call. If the bidder&#39;s legal name does not appear on the OCSL, DCC may consider their bid to be non-compliant. If you change your business name, it is therefore very important that you notify DCC and consider making the change to your MERX account.
+	DCC reserves the right, at its sole discretion, to:
+	
+		Continue using existing source lists that may already be in place for similar or related services such as existing Quick Response Tender (QRT) source lists,
+		Establish other source lists for specific categories of construction services which may require different pre-qualification requirements, such as Quick Response Tender (QRT) source lists. Such other source lists will not be advertised through this OCSL. Such other source lists will be advertised openly on MERX on a case-by-case basis,
+		Verify which contractors have submitted bids under the OCSL, verify if those that did not submit bids are still interested to be on the OCSL and remove from the OCSL those contractors that are no longer interested,
+		Require additional pre-qualification requirements for any specific tenders done through the OCSL,
+		Elect to post any tender openly on MERX in lieu of this OCSL if DCC deems that an open tender would provide the potential for more competition,
+		Tenders may be set aside for Indigenous businesses in accordance with the Procurement Strategy for Indigenous Business (PSIB). In such cases, all contractors and suppliers on the Open Construction Source List (OCSL) will receive an invitation to bid; however, the MERX advertisement will clearly state that the opportunity is reserved for Indigenous businesses under PSIB. To qualify, the Indigenous business must be registered in Indigenous Services Canada&rsquo;s (ISC) Indigenous Business Directory (IBD). If you are forming a Joint Venture (JV) to bid on a contract set aside for Indigenous businesses, at least one member of the JV must be listed on the OCSL, and the Indigenous business within the JV must also be registered in ISC&rsquo;s Indigenous Business Directory. Failure to meet these requirements will result in the bid being deemed non-compliant,
+		Include a requirement for sub-contracting to Indigenous businesses that must be registered under Indigenous Services Canada&rsquo;s (ISC) Indigenous Business Directory. In this case, the MERX Ad specific to the invitation will clearly identify the inclusion of an Indigenous Benefits Plan (IBP).
+	
+	
+	Contractors are advised that contracts awarded by DCC include measurable performance standards and requirements as detailed in form DCL81-Performance Evaluation Guidelines which is available at https://www.dcc-cdc.gc.ca/industry/forms. A contractor that receives an unacceptable or failing score may be removed from this OCSL and receive no further invitations under the OCSL.
+	Contractors and suppliers are advised that all contracts tendered and awarded by DCC are subject to DCC&rsquo;s Procurement Code of Conduct which is available for download at https://www.dcc-cdc.gc.ca/industry/forms. A contractor or a supplier that has been declared ineligible or has been suspended by Public Services and Procurement Canada under its Ineligibility and Suspension Policy and the period of ineligibility or suspension has not expired may be removed from this OCSL and received no further invitations.
+	Contractors and suppliers are advised that DCC&rsquo;s Standard Construction Contract Documents - Electronic Bidding (DCL250) will be used for opportunities under the OCSL and can be downloaded from the DCC website at: https://www.dcc-cdc.gc.ca/industry/forms.
+	Contractors and suppliers are advised that tenders and contracts under this OCSL may contain organization and personnel security requirements. Typically, the organization security requirement will be Designated Organization Screening (DOS) and reliability status for personnel. However more stringent requirement may apply such as Facility Security Clearance (FSC) at the level of SECRET with approved Document Safeguarding (DSC) with secret clearance for personnel.
+	DCC may publish Advance Procurement Notices (APN) identifying potential tenders with anticipated security requirements to provide interested contractors an opportunity to begin the sponsorship request process for potentially obtaining the required security clearance(s) that are anticipated. The process to apply for a security clearance is provided in the APNs.
+	DCC reserves the right to reject any application that does not demonstrate, to the sole satisfaction of DCC, that the contractor or supplier has met the stated requirements. DCC also reserves the right to request clarifications and/or confirmations from any or all firms regarding any aspect of their submission information. A written response to each such communication is required from the firm.
+	By submitting a response to this invitation, contractors and suppliers are providing their consent, pursuant to section 30 of the Defence Production Act, for DCC to publicly disclose, after closing, their legal name, address and whether they have been included on the OCSL.
+	The OCSL may be used for procurements covered by trade agreements to which Canada is a party.
+	You have questions regarding the foregoing, or you wish to be removed from an OCSL, please contact:
+
+Defence Construction Canada
+Andr&eacute; Champagne
+Andre.Champagne@dcc-cdc.gc.caBidding and Documents are available on http://www.merx.com.  Fees may apply; See https://www.merx.com/public/pricing for more information."
