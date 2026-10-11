@@ -92,6 +92,7 @@ PORTFOLIO = (
 
 
 def _fit(hit_count: int) -> float:
+    """Hit count to fit: 0, 0.70, 0.85, 1.00. Those steps are the whole scale."""
     if hit_count <= 0:
         return 0.0
     if hit_count == 1:
@@ -102,6 +103,7 @@ def _fit(hit_count: int) -> float:
 
 
 def _signals_in_text(text: str, primaries: tuple[str, ...]) -> list[str]:
+    """Primary signals actually present in the text. Generic words cannot mint a moat."""
     norm = " ".join(text.lower().replace("&amp;", "&").split())
     found = []
     for primary in primaries:
@@ -112,6 +114,7 @@ def _signals_in_text(text: str, primaries: tuple[str, ...]) -> list[str]:
 
 
 def map_moat(opp: dict) -> dict:
+    """Map opportunity text onto the portfolio. Returns per-repo fits and the positioning paragraph."""
     text = opportunity_text(opp)
     repos = []
     for repo in PORTFOLIO:
@@ -140,6 +143,7 @@ def map_moat(opp: dict) -> dict:
 
 
 def moat_paragraph(high_repos: list[dict]) -> str:
+    """Defensible-angle paragraph for a draft, or an honest no-moat statement."""
     if not high_repos:
         return (
             "No portfolio repo clears the high-fit bar on this text. "

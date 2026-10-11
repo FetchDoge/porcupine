@@ -61,6 +61,7 @@ BLIND_SPOT_MAP = (
 
 
 def blind_spots_for(classification: str) -> list[dict]:
+    """Blind-spot rows for a classification, as copies. The map itself is never mutated."""
     return [dict(row) for row in BLIND_SPOT_MAP if row["when"] == classification]
 
 

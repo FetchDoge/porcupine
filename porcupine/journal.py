@@ -14,16 +14,27 @@ _VERDICTS = {"pursue", "skip", "defend"}
 _OUTCOMES = {"won", "lost", "expired", "noise"}
 
 
+class _ChainBreak(ValueError):
+    """A broken journal link, carrying the offending sequence number."""
+
+    def __init__(self, seq: int) -> None:
+        super().__init__(f"invalid journal chain at seq {seq}")
+        self.seq = seq
+
+
 def _now() -> str:
+    """UTC now, no microseconds."""
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def _canonical(record: dict) -> str:
+    """Canonical JSON for hashing: sorted keys, tight separators, hash excluded."""
     payload = {key: value for key, value in record.items() if key != "hash"}
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def _hash(record: dict) -> str:
+    """SHA-256 of the canonical record. The chain's tamper tripwire."""
     return hashlib.sha256(_canonical(record).encode("utf-8")).hexdigest()
 
 
@@ -33,6 +44,7 @@ class Journal:
 
     @staticmethod
     def _validate(fields: dict) -> None:
+        """Reject malformed records before they touch the chain. Raises ValueError."""
         record_type = fields.get("type")
         if record_type == "decision":
             required = ("opportunity_id", "verdict", "rationale", "evidence_refs")
@@ -53,7 +65,20 @@ class Journal:
             raise ValueError("journal record missing: " + ", ".join(missing))
 
     @staticmethod
+    def _link_digest(record: dict, expected_seq: int, previous: str) -> str:
+        """Digest of one chain link. Raises _ChainBreak naming the bad seq."""
+        try:
+            seq = int(record["seq"])
+            digest = str(record["hash"])
+        except (KeyError, TypeError, ValueError):
+            raise _ChainBreak(expected_seq)
+        if seq != expected_seq or record.get("prev_hash") != previous or _hash(record) != digest:
+            raise _ChainBreak(seq)
+        return digest
+
+    @staticmethod
     def _tail(handle) -> tuple[int, str]:
+        """Walk to the end of the chain. Returns (last_seq, last_hash); handle left at EOF."""
         handle.seek(0)
         last_seq = 0
         last_hash = GENESIS_HASH
@@ -63,18 +88,17 @@ class Journal:
                 continue
             try:
                 record = json.loads(stripped)
-                seq = int(record["seq"])
-                digest = str(record["hash"])
-            except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+            except json.JSONDecodeError as exc:
                 raise ValueError(f"invalid journal line {line_no}") from exc
-            if seq != last_seq + 1 or record.get("prev_hash") != last_hash or _hash(record) != digest:
-                raise ValueError(f"invalid journal chain at seq {seq}")
-            last_seq = seq
-            last_hash = digest
+            if not isinstance(record, dict):
+                raise ValueError(f"invalid journal line {line_no}")
+            last_hash = Journal._link_digest(record, last_seq + 1, last_hash)
+            last_seq += 1
         handle.seek(0, 2)
         return last_seq, last_hash
 
     def append(self, fields: dict) -> dict:
+        """Validate, chain, and append one record under an exclusive lock."""
         self._validate(fields)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.path.open("a+", encoding="utf-8") as handle:
@@ -103,6 +127,7 @@ class Journal:
         rationale: str,
         evidence_refs: Optional[list[str]] = None,
     ) -> dict:
+        """Record a pursue/skip/defend decision with its rationale and evidence."""
         return self.append(
             {
                 "type": "decision",
@@ -114,9 +139,11 @@ class Journal:
         )
 
     def log_action(self, kind: str, detail: str) -> dict:
+        """Record an operator action taken outside the pursue/skip decision."""
         return self.append({"type": "action", "kind": kind, "detail": detail})
 
     def log_outcome(self, opportunity_id: str, outcome: str, note: str) -> dict:
+        """Record what actually happened: won, lost, expired, or noise."""
         return self.append(
             {
                 "type": "outcome",
@@ -127,6 +154,7 @@ class Journal:
         )
 
     def verify(self) -> tuple[bool, Optional[int]]:
+        """Walk the chain without writing. Returns (True, None) or (False, bad_seq)."""
         if not self.path.exists():
             return True, None
         expected_seq = 1
@@ -140,15 +168,14 @@ class Journal:
                         continue
                     try:
                         record = json.loads(stripped)
-                        seq = int(record["seq"])
-                        digest = str(record["hash"])
-                    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+                    except json.JSONDecodeError:
                         return False, expected_seq
-                    if seq != expected_seq:
-                        return False, seq
-                    if record.get("prev_hash") != previous or _hash(record) != digest:
-                        return False, seq
-                    previous = digest
+                    if not isinstance(record, dict):
+                        return False, expected_seq
+                    try:
+                        previous = self._link_digest(record, expected_seq, previous)
+                    except _ChainBreak as exc:
+                        return False, exc.seq
                     expected_seq += 1
             finally:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)

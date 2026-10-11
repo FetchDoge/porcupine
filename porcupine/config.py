@@ -10,7 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-__version__ = "1.0.0"
+# Note: the package version lives in porcupine/__init__.py (single source of truth).
 
 USER_AGENT = (
     "PORCUPINE/1.0 (Canada defence-assurance market radar; "
@@ -247,24 +247,29 @@ SOURCES = (
 
 
 def workspace_root() -> Path:
+    """Runtime root. Everything the run writes stays under it."""
     return Path.cwd()
 
 
 def ledger_path(root: Optional[Path] = None) -> Path:
+    """Path of the append-only opportunity ledger."""
     base = workspace_root() if root is None else Path(root)
     return base / "ledger" / "porcupine.jsonl"
 
 
 def journal_path(root: Optional[Path] = None) -> Path:
+    """Path of the hash-chained decision journal."""
     base = workspace_root() if root is None else Path(root)
     return base / "ledger" / "journal.jsonl"
 
 
 def cache_dir(root: Optional[Path] = None) -> Path:
+    """Directory of cached feed bodies."""
     base = workspace_root() if root is None else Path(root)
     return base / "cache"
 
 
 def output_dir(root: Optional[Path] = None) -> Path:
+    """Directory of run artifacts: ranked, feeds, drafts, last-run."""
     base = workspace_root() if root is None else Path(root)
     return base / "output"

@@ -43,10 +43,12 @@ Commands:
 
 
 def _now() -> str:
+    """UTC now, no microseconds. Timestamps are sortable and comparable."""
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
 def _safe(value: str) -> str:
+    """Filename-safe slug: alphanumerics plus ._- kept, the rest flattened."""
     cleaned = []
     for char in value:
         if char.isalnum() or char in "._-":
@@ -58,6 +60,7 @@ def _safe(value: str) -> str:
 
 
 def _open_label(value: Optional[bool]) -> str:
+    """yes / no / unverified. Unknown open state is never printed as closed."""
     if value is True:
         return "yes"
     if value is False:
@@ -66,6 +69,7 @@ def _open_label(value: Optional[bool]) -> str:
 
 
 def p_win_path(root: Optional[Path] = None) -> Path:
+    """Path of the global win-counter file."""
     return config.ledger_path(root).with_name("p_win.json")
 
 
@@ -112,6 +116,7 @@ def record_win(root: Optional[Path] = None) -> dict:
 
 
 def _publisher_closed_status(status: str) -> bool:
+    """Publisher-side closed states. Empty or 'open' is not closed."""
     token = (status or "").strip().lower()
     if not token or token == "open":
         return False
@@ -121,14 +126,17 @@ def _publisher_closed_status(status: str) -> bool:
 
 
 def _publisher_explicit_open(status: str) -> bool:
+    """True only when the publisher literally says open. Nothing is inferred."""
     return (status or "").strip().lower() == "open"
 
 
 def _is_canadabuys_csv_row(opp: dict) -> bool:
+    """True for rows parsed from the CanadaBuys CSV, which carry publisher status."""
     return (opp.get("source_format") or "") == "canadabuys_csv"
 
 
 def _csv_close_date_invalid(opp: dict) -> bool:
+    """A close_at the parser could not turn into a date is not actionable."""
     close_at = str(opp.get("close_at") or "").strip()
     if not close_at:
         return False
@@ -136,6 +144,7 @@ def _csv_close_date_invalid(opp: dict) -> bool:
 
 
 def _same_day_close_unresolved(opp: dict, today: date) -> bool:
+    """Same-day close with unknown timezone cannot be confirmed open or closed."""
     close_at = str(opp.get("close_at") or "")
     if "T" not in close_at:
         return False
@@ -196,11 +205,35 @@ def per_source_run_counts(
     return meta
 
 
+def _disposition(classification: str, white: bool, fit: float, confirmed_open: bool) -> str:
+    """rejected / matched / near-miss from classification, fit bar, and confirmed-open."""
+    if classification == CLASS_OUT:
+        return "rejected"
+    if white and fit >= config.MATCHED_FIT_MIN and confirmed_open:
+        return "matched"
+    return "near-miss"
+
+
+def _dump_json(obj: object) -> str:
+    """Canonical JSON file text: indented, unicode kept, trailing newline."""
+    return json.dumps(obj, indent=2, ensure_ascii=False) + "\n"
+
+
+def _render_recorded_draft(row: dict) -> str:
+    """Heilmeier render from a ledger row. Unknowns stay [TO VERIFY], never invented."""
+    return render_heilmeier(
+        row,
+        moat={"paragraph": row.get("moat_paragraph"), "high_repos": row.get("high_repos") or []},
+        score=row,
+    )
+
+
 def assemble(
     opportunities: list[dict],
     today: Optional[date] = None,
     root: Optional[Path] = None,
 ) -> list[dict]:
+    """Score, classify, and disposition every opportunity. Returns EV-ranked rows."""
     today = today or date.today()
     recorded = load_p_win(root)
     rows = []
@@ -216,15 +249,10 @@ def assemble(
         )
         white = scope["classification"] == CLASS_WHITE_SPACE
         fit = float(score["portfolio_fit"])
-        confirmed_open = _actionable_open(opp, score["open"], today) is True
-        if scope["classification"] == CLASS_OUT:
-            disposition = "rejected"
-        elif white and fit >= config.MATCHED_FIT_MIN and confirmed_open:
-            disposition = "matched"
-        else:
-            disposition = "near-miss"
-        high_fit = white and fit >= config.HIGH_FIT_MIN and confirmed_open
         open_value = _actionable_open(opp, score["open"], today)
+        confirmed_open = open_value is True
+        disposition = _disposition(scope["classification"], white, fit, confirmed_open)
+        high_fit = white and fit >= config.HIGH_FIT_MIN and confirmed_open
         rows.append(
             {
                 "record_type": "opportunity",
@@ -287,6 +315,7 @@ def assemble(
 
 
 def unused_note(row: dict) -> str:
+    """Why a row sits in unused material. Every rejected row keeps its reason."""
     if row["classification"] == "capability-saturated":
         spots = ", ".join(row.get("blind_spot_ids") or []) or "capability-vs-assurance"
         return (
@@ -305,6 +334,7 @@ def unused_note(row: dict) -> str:
 
 
 def format_table(rows: list[dict]) -> str:
+    """Fixed-width ranked table for the console. Untrusted titles are markdown-escaped."""
     header = (
         f"{'rk':>3}  {'ev':>12}  {'fit':>5}  {'reach':>5}  {'p_lcb':>6}  "
         f"{'open':<10}  {'disp':<9}  {'class':<22}  {'source':<22}  title"
@@ -329,28 +359,33 @@ def format_table(rows: list[dict]) -> str:
 
 
 def _write(path: Path, text: str) -> None:
+    """Write text, creating parent directories. Callers own the content."""
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
 
 
+def _unused_material_row(row: dict) -> dict:
+    """The ledger keeps rejected rows as unused material, each with its reason attached."""
+    return {
+        "record_type": "unused_material",
+        "source": row["source"],
+        "id": f"unused:{row['id']}",
+        "parent_id": row["id"],
+        "recorded_at": row["recorded_at"],
+        "title": row["title"],
+        "note": unused_note(row),
+        "disposition": row["disposition"],
+        "classification": row["classification"],
+    }
+
+
 def _record(ledger: Ledger, rows: list[dict]) -> dict:
+    """Append ranked rows; near-miss and rejected rows also land as unused material."""
     batch: list[dict] = []
     for row in rows:
         batch.append(row)
         if row["disposition"] in ("near-miss", "rejected"):
-            batch.append(
-                {
-                    "record_type": "unused_material",
-                    "source": row["source"],
-                    "id": f"unused:{row['id']}",
-                    "parent_id": row["id"],
-                    "recorded_at": row["recorded_at"],
-                    "title": row["title"],
-                    "note": unused_note(row),
-                    "disposition": row["disposition"],
-                    "classification": row["classification"],
-                }
-            )
+            batch.append(_unused_material_row(row))
     appended = 0
     existed = 0
     for result in ledger.append_many(batch):
@@ -361,7 +396,13 @@ def _record(ledger: Ledger, rows: list[dict]) -> dict:
     return {"appended": appended, "already_recorded": existed}
 
 
+def _write_no_draft_note(out: Path, filename: str, lines: list[str]) -> None:
+    """The no-draft outcome is an artifact too, not an absence."""
+    _write(out / filename, "\n".join(lines))
+
+
 def _draft_open(rows: list[dict], out: Path) -> Optional[str]:
+    """Draft the top matched+open row. Otherwise leave an explicit no-draft artifact."""
     matched_open = [
         row
         for row in rows
@@ -369,20 +410,15 @@ def _draft_open(rows: list[dict], out: Path) -> Optional[str]:
     ]
     if matched_open:
         top = matched_open[0]
-        text = render_heilmeier(
-            top,
-            moat={"paragraph": top.get("moat_paragraph"), "high_repos": top.get("high_repos")},
-            score=top,
-        )
         path = out / "drafts" / f"{_safe(str(top['id']))}.md"
-        _write(path, text)
+        _write(path, _render_recorded_draft(top))
         return str(path)
     open_rows = [row for row in rows if row.get("open") is True]
     if open_rows:
-        _write(
-            out / "NO-VERIFIED-MATCH-DRAFT.md",
-            "\n".join(
-                [
+        _write_no_draft_note(
+            out,
+            "NO-VERIFIED-MATCH-DRAFT.md",
+            [
                     "# No verified portfolio match for automatic draft",
                     "",
                     "This run found confirmed-open rows, but none met the matched disposition "
@@ -393,14 +429,13 @@ def _draft_open(rows: list[dict], out: Path) -> Optional[str]:
                     "Use `python3 -m porcupine.cli draft <id>` for an exploratory Heilmeier render "
                     "(uncalibrated heuristic scores; not a verified portfolio match).",
                     "",
-                ]
-            ),
+            ],
         )
         return None
-    _write(
-        out / "NO-OPEN-DRAFT.md",
-        "\n".join(
-            [
+    _write_no_draft_note(
+        out,
+        "NO-OPEN-DRAFT.md",
+        [
                 "# No confirmed-open source for automatic draft",
                 "",
                 "This run did not find an opportunity whose parsed deadline is still in the future "
@@ -409,16 +444,49 @@ def _draft_open(rows: list[dict], out: Path) -> Optional[str]:
                 "Closed and unverified rows, if any, are in the ledger and in ranked.json.",
                 "Use `python3 -m porcupine.cli draft <id>` to render a Heilmeier file on purpose.",
                 "",
-            ]
-        ),
+        ],
     )
     return None
+
+
+def _enrich_feeds_with_counts(scouted: dict, candidate_rows: list[dict]) -> None:
+    """Per-feed scored counts on CSV feeds. Feeds never mirror the global shortlist."""
+    for feed in scouted.get("feeds") or []:
+        if feed.get("raw_rows") is None:
+            continue
+        per_feed = per_source_run_counts(candidate_rows, str(feed.get("id") or ""))
+        feed["candidate_rows"] = per_feed["candidate_rows"]
+        feed["displayed_rows"] = per_feed["displayed_rows"]
+        feed["matched_rows"] = per_feed["matched_rows"]
+        feed["shortlist_capped"] = per_feed["shortlist_capped"]
+        feed["opportunities"] = per_feed["displayed_rows"]
+
+
+def _print_feed_line(feed: dict) -> None:
+    """One console line per feed: skipped, counted, or empty."""
+    if feed["status"] != "ok":
+        print(f"SKIP {feed['id']}: {feed['error']}")
+    elif feed.get("raw_rows") is not None:
+        print(
+            f"OK {feed['id']}: raw={feed.get('raw_rows')} valid={feed.get('valid_rows')} "
+            f"unique={feed.get('unique_rows')} matched={feed.get('matched_rows', 0)} "
+            f"shown={feed.get('displayed_rows', feed.get('opportunities', 0))} "
+            f"(heuristic EV rank; display cap {config.MAX_OPPS_PER_FEED}) ({feed.get('how')})"
+        )
+    elif feed.get("opportunities", 0) == 0:
+        print(f"EMPTY {feed['id']}: parsed 0 opportunities")
+    else:
+        print(
+            f"OK {feed['id']}: {feed['opportunities']} scored rows "
+            f"(heuristic EV rank; display cap {config.MAX_OPPS_PER_FEED}) ({feed.get('how')})"
+        )
 
 
 def cmd_run(
     root: Optional[Path] = None,
     sources: Optional[list[dict]] = None,
 ) -> int:
+    """Full run: scout, score, rank, record, auto-draft, write the report artifacts."""
     root = Path(root) if root is not None else config.workspace_root()
     out = config.output_dir(root)
     out.mkdir(parents=True, exist_ok=True)
@@ -429,14 +497,7 @@ def cmd_run(
     )
     candidate_rows = assemble(scouted["opportunities"], root=root)
     rows, shortlist = apply_display_shortlist(candidate_rows)
-    for feed in scouted.get("feeds") or []:
-        if feed.get("raw_rows") is not None:
-            per_feed = per_source_run_counts(candidate_rows, str(feed.get("id") or ""))
-            feed["candidate_rows"] = per_feed["candidate_rows"]
-            feed["displayed_rows"] = per_feed["displayed_rows"]
-            feed["matched_rows"] = per_feed["matched_rows"]
-            feed["shortlist_capped"] = per_feed["shortlist_capped"]
-            feed["opportunities"] = per_feed["displayed_rows"]
+    _enrich_feeds_with_counts(scouted, candidate_rows)
     health = scouted.get("health") or {}
     ledger = Ledger(config.ledger_path(root))
     recorded = _record(ledger, candidate_rows)
@@ -456,9 +517,9 @@ def cmd_run(
         "feeds": scouted["feeds"],
         "scout_health": health,
     }
-    _write(out / "ranked.json", json.dumps(rows, indent=2, ensure_ascii=False) + "\n")
-    _write(out / "feeds.json", json.dumps(scouted["feeds"], indent=2, ensure_ascii=False) + "\n")
-    _write(out / "last-run.json", json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
+    _write(out / "ranked.json", _dump_json(rows))
+    _write(out / "feeds.json", _dump_json(scouted["feeds"]))
+    _write(out / "last-run.json", _dump_json(summary))
     body = [
         f"# PORCUPINE run {summary['generated_at']}",
         "",
@@ -507,22 +568,7 @@ def cmd_run(
     if health.get("summary"):
         print(health["summary"])
     for feed in scouted["feeds"]:
-        if feed["status"] != "ok":
-            print(f"SKIP {feed['id']}: {feed['error']}")
-        elif feed.get("raw_rows") is not None:
-            print(
-                f"OK {feed['id']}: raw={feed.get('raw_rows')} valid={feed.get('valid_rows')} "
-                f"unique={feed.get('unique_rows')} matched={feed.get('matched_rows', 0)} "
-                f"shown={feed.get('displayed_rows', feed.get('opportunities', 0))} "
-                f"(heuristic EV rank; display cap {config.MAX_OPPS_PER_FEED}) ({feed.get('how')})"
-            )
-        elif feed.get("opportunities", 0) == 0:
-            print(f"EMPTY {feed['id']}: parsed 0 opportunities")
-        else:
-            print(
-                f"OK {feed['id']}: {feed['opportunities']} scored rows "
-                f"(heuristic EV rank; display cap {config.MAX_OPPS_PER_FEED}) ({feed.get('how')})"
-            )
+        _print_feed_line(feed)
     print(format_table(rows))
     print(f"high-fit open matches: {high}")
     print(f"wrote {out / 'ranked.md'}")
@@ -540,6 +586,7 @@ def cmd_run(
 
 
 def _source_by_id(ident: str) -> Optional[dict]:
+    """Configured source dict by id, or None. A copy, so callers cannot mutate config."""
     for item in config.SOURCES:
         if item["id"] == ident:
             return dict(item)
@@ -551,6 +598,7 @@ def cmd_replay_csv(
     root: Optional[Path] = None,
     source_id: str = "canadabuys-open-tenders-csv",
 ) -> int:
+    """Offline replay of one CSV file: parse, score, rank, write artifacts. No network."""
     root = Path(root) if root is not None else config.workspace_root()
     source = _source_by_id(source_id)
     if source is None:
@@ -578,8 +626,8 @@ def cmd_replay_csv(
     feed["matched_rows"] = per_feed["matched_rows"]
     feed["shortlist_capped"] = per_feed["shortlist_capped"]
     feed["opportunities"] = per_feed["displayed_rows"]
-    _write(out / "feeds.json", json.dumps([feed], indent=2, ensure_ascii=False) + "\n")
-    _write(out / "ranked.json", json.dumps(rows, indent=2, ensure_ascii=False) + "\n")
+    _write(out / "feeds.json", _dump_json([feed]))
+    _write(out / "ranked.json", _dump_json(rows))
     summary = {
         "generated_at": _now(),
         "version": __version__,
@@ -591,7 +639,7 @@ def cmd_replay_csv(
         "shortlist_capped": shortlist["shortlist_capped"],
         "feed": feed,
     }
-    _write(out / "last-run.json", json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
+    _write(out / "last-run.json", _dump_json(summary))
     print(
         f"replay-csv {path.name}: raw={feed.get('raw_rows')} "
         f"valid={feed.get('valid_rows')} unique={feed.get('unique_rows')} "
@@ -603,6 +651,7 @@ def cmd_replay_csv(
 
 
 def _run_options(args: list[str]) -> tuple[Optional[Path], Optional[list[dict]], list[str]]:
+    """Parse --root and --source flags. Unknown sources exit 2 immediately."""
     root: Optional[Path] = None
     source_ids: list[str] = []
     rest: list[str] = []
@@ -632,11 +681,13 @@ def _run_options(args: list[str]) -> tuple[Optional[Path], Optional[list[dict]],
 
 
 def _opportunity_rows(ledger: Ledger) -> list[dict]:
+    """Ledger opportunity rows, EV-ranked. Unused material is excluded."""
     rows = [row for row in ledger.read() if row.get("record_type") == "opportunity"]
     return rank_scores(rows)
 
 
 def cmd_top(n: int, root: Optional[Path] = None) -> int:
+    """Print the top N ledger rows by EV."""
     root = Path(root) if root is not None else config.workspace_root()
     rows = _opportunity_rows(Ledger(config.ledger_path(root)))[: max(0, n)]
     print(format_table(rows))
@@ -645,6 +696,7 @@ def cmd_top(n: int, root: Optional[Path] = None) -> int:
 
 
 def cmd_record_win(root: Optional[Path] = None) -> int:
+    """Increment the global win counter. Not a verified per-opportunity learning loop."""
     state = record_win(root)
     bound = wilson_lower_bound(state["p_win_successes"], state["p_win_n"])
     print(
@@ -657,6 +709,7 @@ def cmd_record_win(root: Optional[Path] = None) -> int:
 
 
 def cmd_draft(ident: str, root: Optional[Path] = None) -> int:
+    """Render a Heilmeier draft for one recorded id. Exploratory unless matched."""
     root = Path(root) if root is not None else config.workspace_root()
     rows = [
         row
@@ -675,11 +728,7 @@ def cmd_draft(ident: str, root: Optional[Path] = None) -> int:
                 "Heuristic EV/fit scores are uncalibrated and this is not a verified portfolio match.",
                 file=sys.stderr,
             )
-        text = render_heilmeier(
-            row,
-            moat={"paragraph": row.get("moat_paragraph"), "high_repos": row.get("high_repos") or []},
-            score=row,
-        )
+        text = _render_recorded_draft(row)
         path = out / "drafts" / f"{_safe(str(row.get('source') or 'src'))}__{_safe(ident)}.md"
         _write(path, text)
         written.append(str(path))
@@ -687,17 +736,25 @@ def cmd_draft(ident: str, root: Optional[Path] = None) -> int:
     return 0 if written else 2
 
 
-def cmd_report(root: Optional[Path] = None) -> int:
-    root = Path(root) if root is not None else config.workspace_root()
-    ledger = Ledger(config.ledger_path(root))
-    rows = ledger.read()
+def _count_ledger_rows(rows: list[dict]) -> tuple[dict[str, int], dict[str, int]]:
+    """Counts by record type and by disposition. Counting never mutates."""
     by_type: dict[str, int] = {}
     by_disp: dict[str, int] = {}
     for row in rows:
-        by_type[str(row.get("record_type") or "?")] = by_type.get(str(row.get("record_type") or "?"), 0) + 1
+        record_type = str(row.get("record_type") or "?")
+        by_type[record_type] = by_type.get(record_type, 0) + 1
         if row.get("record_type") == "opportunity":
             key = str(row.get("disposition") or "?")
             by_disp[key] = by_disp.get(key, 0) + 1
+    return by_type, by_disp
+
+
+def cmd_report(root: Optional[Path] = None) -> int:
+    """Ledger counts, last-run summary, and the top ledger rows."""
+    root = Path(root) if root is not None else config.workspace_root()
+    ledger = Ledger(config.ledger_path(root))
+    rows = ledger.read()
+    by_type, by_disp = _count_ledger_rows(rows)
     opps = _opportunity_rows(ledger)
     high = sum(1 for row in opps if row.get("high_fit"))
     print(f"PORCUPINE {__version__} report")
@@ -725,6 +782,7 @@ def cmd_report(root: Optional[Path] = None) -> int:
 
 
 def _journal_options(args: list[str]) -> tuple[dict[str, str], list[str], Optional[Path]]:
+    """Parse journal flags. Unknown or valueless flags raise ValueError."""
     options: dict[str, str] = {}
     evidence_refs: list[str] = []
     root: Optional[Path] = None
@@ -748,6 +806,7 @@ def _journal_options(args: list[str]) -> tuple[dict[str, str], list[str], Option
 
 
 def cmd_journal(args: list[str]) -> int:
+    """Journal subcommands: log-decision, log-outcome, verify."""
     if not args or args[0] not in ("log-decision", "log-outcome", "verify"):
         print("journal expects log-decision, log-outcome, or verify", file=sys.stderr)
         return 2
@@ -790,64 +849,94 @@ def cmd_journal(args: list[str]) -> int:
     return 0
 
 
+def _cmd_run(args: list[str]) -> int:
+    root, sources, _rest = _run_options(args)
+    return cmd_run(root=root, sources=sources)
+
+
+def _cmd_replay_csv(args: list[str]) -> int:
+    if not args:
+        print("replay-csv expects --file PATH", file=sys.stderr)
+        return 2
+    csv_path: Optional[Path] = None
+    root: Optional[Path] = None
+    source_id = "canadabuys-open-tenders-csv"
+    index = 0
+    while index < len(args):
+        if args[index] == "--file" and index + 1 < len(args):
+            csv_path = Path(args[index + 1])
+            index += 2
+        elif args[index] == "--root" and index + 1 < len(args):
+            root = Path(args[index + 1])
+            index += 2
+        elif args[index] == "--source" and index + 1 < len(args):
+            source_id = args[index + 1]
+            index += 2
+        else:
+            print(f"unknown replay-csv option {args[index]}", file=sys.stderr)
+            return 2
+    if csv_path is None:
+        print("replay-csv requires --file PATH", file=sys.stderr)
+        return 2
+    return cmd_replay_csv(csv_path, root=root, source_id=source_id)
+
+
+def _cmd_top(args: list[str]) -> int:
+    if not args:
+        return cmd_top(10)
+    try:
+        count = int(args[0])
+    except ValueError:
+        print("top expects an integer", file=sys.stderr)
+        return 2
+    return cmd_top(count)
+
+
+def _cmd_draft(args: list[str]) -> int:
+    if not args:
+        print("draft expects an id", file=sys.stderr)
+        return 2
+    return cmd_draft(args[0])
+
+
+def _cmd_record_win(args: list[str]) -> int:
+    return cmd_record_win()
+
+
+def _cmd_report(args: list[str]) -> int:
+    return cmd_report()
+
+
+def _cmd_journal(args: list[str]) -> int:
+    return cmd_journal(args)
+
+
+# Command name to handler. Each handler takes argv after the command word.
+_COMMANDS = {
+    "run": _cmd_run,
+    "replay-csv": _cmd_replay_csv,
+    "top": _cmd_top,
+    "draft": _cmd_draft,
+    "record-win": _cmd_record_win,
+    "report": _cmd_report,
+    "journal": _cmd_journal,
+}
+
+
 def main(argv: Optional[list[str]] = None) -> int:
+    """Dispatch one command. Unknown commands print help and exit 2."""
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     args = list(sys.argv[1:] if argv is None else argv)
     if not args or args[0] in ("-h", "--help", "help"):
         print(HELP)
         return 0
     command = args[0]
-    if command == "run":
-        root, sources, _rest = _run_options(args[1:])
-        return cmd_run(root=root, sources=sources)
-    if command == "replay-csv":
-        if len(args) < 2:
-            print("replay-csv expects --file PATH", file=sys.stderr)
-            return 2
-        csv_path: Optional[Path] = None
-        root: Optional[Path] = None
-        source_id = "canadabuys-open-tenders-csv"
-        index = 1
-        while index < len(args):
-            if args[index] == "--file" and index + 1 < len(args):
-                csv_path = Path(args[index + 1])
-                index += 2
-            elif args[index] == "--root" and index + 1 < len(args):
-                root = Path(args[index + 1])
-                index += 2
-            elif args[index] == "--source" and index + 1 < len(args):
-                source_id = args[index + 1]
-                index += 2
-            else:
-                print(f"unknown replay-csv option {args[index]}", file=sys.stderr)
-                return 2
-        if csv_path is None:
-            print("replay-csv requires --file PATH", file=sys.stderr)
-            return 2
-        return cmd_replay_csv(csv_path, root=root, source_id=source_id)
-    if command == "top":
-        if len(args) == 1:
-            return cmd_top(10)
-        try:
-            count = int(args[1])
-        except ValueError:
-            print("top expects an integer", file=sys.stderr)
-            return 2
-        return cmd_top(count)
-    if command == "draft":
-        if len(args) < 2:
-            print("draft expects an id", file=sys.stderr)
-            return 2
-        return cmd_draft(args[1])
-    if command == "record-win":
-        return cmd_record_win()
-    if command == "report":
-        return cmd_report()
-    if command == "journal":
-        return cmd_journal(args[1:])
-    print(f"unknown command {command}", file=sys.stderr)
-    print(HELP, file=sys.stderr)
-    return 2
+    handler = _COMMANDS.get(command)
+    if handler is None:
+        print(f"unknown command {command}", file=sys.stderr)
+        print(HELP, file=sys.stderr)
+        return 2
+    return handler(args[1:])
 
 
 if __name__ == "__main__":

@@ -26,6 +26,7 @@ class NetGuardError(Exception):
 
 
 def _blocked_address(address: ipaddress._BaseAddress) -> bool:
+    """True for private, loopback, link-local, multicast, reserved, or unspecified addresses."""
     return any(
         (
             address.is_private,
@@ -39,6 +40,7 @@ def _blocked_address(address: ipaddress._BaseAddress) -> bool:
 
 
 def _validate_url(url: str, hop_chain: list[str]) -> None:
+    """Raise NetGuardError unless the URL is safe to fetch. Every redirect hop is re-validated."""
     try:
         parsed = urlsplit(url)
         port = parsed.port

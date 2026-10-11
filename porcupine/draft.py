@@ -26,6 +26,7 @@ SECTIONS = (
 
 
 def _excerpt(text: str, limit: int = 500) -> str:
+    """Collapsed excerpt, or a [TO VERIFY] marker when the text is empty."""
     clean = " ".join((text or "").split())
     if not clean:
         return "[TO VERIFY] the challenge text was empty after parsing."
@@ -35,6 +36,7 @@ def _excerpt(text: str, limit: int = 500) -> str:
 
 
 def _status_line(open_state: Optional[bool]) -> str:
+    """One status sentence. Unverified open state is never written as open."""
     if open_state is True:
         return "Deadline on the parsed page is still ahead. [TO VERIFY] the notice has not been amended or withdrawn."
     if open_state is False:
@@ -54,6 +56,7 @@ def render_heilmeier(
     score: Optional[dict] = None,
     today: Optional[date] = None,
 ) -> str:
+    """Render a Heilmeier concept draft. Anything unstated stays [TO VERIFY]; nothing is submitted."""
     today = today or date.today()
     moat = moat if moat is not None else map_moat(opp)
     score = score if score is not None else score_opportunity(opp, moat=moat, today=today)

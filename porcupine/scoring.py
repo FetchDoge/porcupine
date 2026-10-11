@@ -29,6 +29,7 @@ def expected_value(
     reachability: float,
     effort: float,
 ) -> float:
+    """EV = funding × portfolio_fit × reachability − effort. Heuristic, uncalibrated."""
     return (funding * portfolio_fit * reachability) - effort
 
 
@@ -71,6 +72,7 @@ def component_for_trl(trl: Optional[str]) -> Optional[str]:
 
 
 def portfolio_fit_score(assurance_hits: int, moat_strength: float) -> float:
+    """Keyword density blended with moat strength, clamped to 0–1."""
     saturation = config.ASSURANCE_DENSITY_SATURATION
     density = min(1.0, assurance_hits / saturation) if saturation else 0.0
     fit = (config.FIT_KEYWORD_WEIGHT * density) + (config.FIT_MOAT_WEIGHT * moat_strength)
@@ -86,12 +88,14 @@ def _with_trl(trace: str, opp: dict) -> str:
 
 
 def reachability_score(opp: dict, today: date) -> tuple[float, str]:
+    """Named reachability value plus its trace. Nothing between the named values is invented."""
     kind = opp.get("source_kind") or "default"
+
+    def _named(name: str, trace: str) -> tuple[float, str]:
+        return config.REACHABILITY[name], _with_trl(trace, opp)
+
     if kind == "award":
-        return (
-            config.REACHABILITY["closed"],
-            _with_trl("reachability=config.REACHABILITY.closed (source_kind=award)", opp),
-        )
+        return _named("closed", "reachability=config.REACHABILITY.closed (source_kind=award)")
     deadline = opp.get("deadline")
     if deadline:
         try:
@@ -100,33 +104,21 @@ def reachability_score(opp: dict, today: date) -> tuple[float, str]:
             closed = False
             deadline = None
         if deadline and closed:
-            return (
-                config.REACHABILITY["closed"],
-                _with_trl(
-                    f"reachability=config.REACHABILITY.closed (deadline {opp.get('deadline')} before {today.isoformat()})",
-                    opp,
-                ),
+            return _named(
+                "closed",
+                f"reachability=config.REACHABILITY.closed (deadline {opp.get('deadline')} before {today.isoformat()})",
             )
         if deadline and not closed:
-            return (
-                config.REACHABILITY["deadline_future"],
-                _with_trl(
-                    f"reachability=config.REACHABILITY.deadline_future (deadline {deadline})",
-                    opp,
-                ),
+            return _named(
+                "deadline_future",
+                f"reachability=config.REACHABILITY.deadline_future (deadline {deadline})",
             )
     if kind == "job_board":
-        return (
-            config.REACHABILITY["job_board"],
-            _with_trl(
-                "reachability=config.REACHABILITY.job_board (no deadline on a job board)",
-                opp,
-            ),
+        return _named(
+            "job_board",
+            "reachability=config.REACHABILITY.job_board (no deadline on a job board)",
         )
-    return (
-        config.REACHABILITY["deadline_absent"],
-        _with_trl("reachability=config.REACHABILITY.deadline_absent", opp),
-    )
+    return _named("deadline_absent", "reachability=config.REACHABILITY.deadline_absent")
 
 
 def openness(opp: dict, today: date) -> Optional[bool]:
@@ -148,6 +140,7 @@ def openness(opp: dict, today: date) -> Optional[bool]:
 
 
 def _assurance_hits(opp: dict) -> list[str]:
+    """Assurance-core keywords on the opportunity, in lens order."""
     text = opportunity_text(opp)
     matched = match_keywords(text)
     if not matched and opp.get("raw_keywords_matched"):
@@ -162,6 +155,7 @@ def score_opportunity(
     p_win_successes: float = 0.0,
     p_win_n: int = 0,
 ) -> dict:
+    """Score one opportunity: fit, reachability, EV, openness, and the traces behind each."""
     today = today or date.today()
     moat = moat if moat is not None else map_moat(opp)
     hits = _assurance_hits(opp)
