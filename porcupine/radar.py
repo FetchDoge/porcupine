@@ -27,6 +27,12 @@ from .netguard import guarded_urlopen as urlopen
 
 log = logging.getLogger("porcupine.radar")
 
+# ---------------------------------------------------------------------------
+# §1 — Text extraction: money, deadlines, keywords, TRL
+#
+# Pure functions over page text. Nothing here touches the network or the disk.
+# ---------------------------------------------------------------------------
+
 _ARTICLE = re.compile(r"(?is)<article\b([^>]*)>(.*?)</article>")
 _DATA_ID = re.compile(r"(?i)\bdata-id\s*=\s*[\"']([^\"']+)[\"']")
 _ISO_DATE = re.compile(r"\b(20[0-9]{2})-(\d{2})-(\d{2})\b")
@@ -84,6 +90,7 @@ _DATE_LABEL = re.compile(
 
 
 def opportunity_text(opp: dict) -> str:
+    """Title plus description: the text every lens reads."""
     return "\n".join(str(opp.get(key) or "") for key in ("title", "description"))
 
 
@@ -105,6 +112,7 @@ def _contains_term(norm: str, term: str) -> bool:
 
 
 def match_terms(text: str, terms: tuple[str, ...]) -> list[str]:
+    """Terms present in text, with keyword variants. Empty text matches nothing."""
     if not text:
         return []
     norm = re.sub(r"\s+", " ", text.lower().replace("\u00a0", " ").replace("&amp;", "&"))
@@ -121,6 +129,7 @@ def match_keywords(text: str) -> list[str]:
 
 
 def match_capability(text: str) -> list[str]:
+    """Capability markers present in text, in marker order."""
     return match_terms(text, config.CAPABILITY_MARKERS)
 
 
@@ -266,10 +275,8 @@ def _iso_from_parts(year: int, month: int, day: int) -> Optional[str]:
         return None
 
 
-def parse_deadline(text: str) -> tuple[Optional[str], str]:
-    """Pick a close date if one is written. Does not invent one."""
-    if not text:
-        return None, "deadline_absent"
+def _collect_date_candidates(text: str) -> list[tuple[int, str, str]]:
+    """Every (position, iso, raw) date candidate in every supported format."""
     candidates = []
     for match in _ISO_DATE.finditer(text):
         iso = _iso_from_parts(int(match.group(1)), int(match.group(2)), int(match.group(3)))
@@ -283,6 +290,14 @@ def parse_deadline(text: str) -> tuple[Optional[str], str]:
         iso = _iso_from_parts(int(match.group(3)), _MONTHS[match.group(1).lower()], int(match.group(2)))
         if iso:
             candidates.append((match.start(), iso, match.group(0)))
+    return candidates
+
+
+def parse_deadline(text: str) -> tuple[Optional[str], str]:
+    """Pick a close date if one is written. Does not invent one."""
+    if not text:
+        return None, "deadline_absent"
+    candidates = _collect_date_candidates(text)
     if not candidates:
         return None, "deadline_absent"
     labeled = []
@@ -313,6 +328,13 @@ def sanitize_markdown(text: str) -> str:
     return "".join(escaped)
 
 
+# ---------------------------------------------------------------------------
+# §2 — HTML parsing: articles and listing links to normalized opportunities
+#
+# Two card shapes: <article> fragments and bare links on listing pages.
+# Both funnel through _normalize_html_card so one gate decides what exists.
+# ---------------------------------------------------------------------------
+
 def _allowed_url(url: str, page_url: str) -> str:
     """Absolute http(s) URL, or empty when the scheme is not on the allowlist."""
     raw = (url or "").strip()
@@ -328,6 +350,7 @@ def _allowed_url(url: str, page_url: str) -> str:
 
 
 def _make_id(data_id: str, url: str, title: str, source: str) -> str:
+    """Stable id: data-id, solicitation number, URL slug, then a content digest."""
     if data_id and data_id.strip():
         return data_id.strip()[:120]
     blob = f"{title} {url}"
@@ -343,7 +366,7 @@ def _make_id(data_id: str, url: str, title: str, source: str) -> str:
     return f"t-{digest}"
 
 
-def _normalize(
+def _normalize_html_card(
     *,
     data_id: str,
     title: str,
@@ -354,6 +377,7 @@ def _normalize(
     source_kind: str,
     page_url: str,
 ) -> Optional[dict]:
+    """One HTML card to a normalized opportunity. None when too thin or lens-deaf."""
     title = " ".join((title or "").split())
     text = " ".join((text or "").split())
     if len(text) < 40 and len(title) < 12:
@@ -441,6 +465,7 @@ class _SectionParser(HTMLParser):
 
 
 def _extract_articles(html: str) -> list[dict]:
+    """Split <article> cards into title/text/url triples; skips oversized or empty sections."""
     cards = []
     for match in _ARTICLE.finditer(html):
         attrs, body = match.group(1), match.group(2)
@@ -558,10 +583,11 @@ def _cards_to_opportunities(
     source_kind: str,
     page_url: str,
 ) -> list[dict]:
+    """Normalize cards, drop empties and duplicates, cap at MAX_OPPS_PER_FEED."""
     opportunities = []
     seen = set()
     for card in cards:
-        opp = _normalize(
+        opp = _normalize_html_card(
             data_id=card.get("data_id") or "",
             title=card.get("title") or "",
             url=card.get("url") or "",
@@ -639,6 +665,12 @@ def parse_opportunities_html(
     )
 
 
+# ---------------------------------------------------------------------------
+# §3 — Provenance: content-addressed snapshots and acquisition stamps
+#
+# Every record carries where it came from. A hash is identity, not authenticity.
+# ---------------------------------------------------------------------------
+
 _PUBLISHER_CLOSED_STATUS = frozenset(
     {
         "closed",
@@ -654,22 +686,27 @@ _TAG_RE = re.compile(r"<[^>]+>")
 
 
 def _sha256_text(text: str) -> str:
+    """SHA-256 of decoded text, UTF-8 encoded. CRLF and LF hash differently."""
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _sha256_bytes(raw: bytes) -> str:
+    """SHA-256 of raw downloaded bytes."""
     return hashlib.sha256(raw).hexdigest()
 
 
 def source_snapshots_dir(root: Path) -> Path:
+    """Directory holding content-addressed source snapshots under the runtime root."""
     return Path(root) / "source-snapshots"
 
 
 def snapshot_body_rel_path(body_text_sha256: str) -> str:
+    """Relative path of the decoded-text snapshot for a body hash."""
     return f"source-snapshots/{body_text_sha256}.txt"
 
 
 def snapshot_meta_rel_path(acquisition_meta_sha256: str) -> str:
+    """Relative path of the acquisition-metadata sidecar for an identity hash."""
     return f"source-snapshots/{acquisition_meta_sha256}.json"
 
 
@@ -689,12 +726,14 @@ def _acquisition_identity_payload(acquisition: dict, text_hash: str) -> dict:
 
 
 def acquisition_meta_sha256(acquisition: dict, text_hash: str) -> str:
+    """Content identity of one acquisition. Excludes observed_at so replays dedup."""
     payload = _acquisition_identity_payload(acquisition, text_hash)
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _path_confined_under(root: Path, target: Path) -> bool:
+    """True when target stays under root. Snapshots never escape the runtime dir."""
     root_resolved = Path(root).resolve()
     target_resolved = target.resolve()
     return target_resolved == root_resolved or root_resolved in target_resolved.parents
@@ -828,6 +867,7 @@ def _apply_acquisition_stamp(
     offline: bool,
     snapshot_root: Optional[Path],
 ) -> dict:
+    """Build the acquisition record, persist the snapshot when supported, stamp every opportunity."""
     stamp = fetched_at if isinstance(fetched_at, str) and fetched_at.strip() else "unknown"
     acquisition = {
         "source_id": source.get("id") or "",
@@ -856,7 +896,15 @@ def _apply_acquisition_stamp(
     return {**acquisition, **snapshot_refs}
 
 
+# ---------------------------------------------------------------------------
+# §4 — CanadaBuys CSV intake: broad parse, keyword gate downstream
+#
+# Rows are counted and normalized independent of the lens. Relevance is
+# applied later; nothing vanishes without a recorded reason.
+# ---------------------------------------------------------------------------
+
 def _clean_csv_description(text: str) -> str:
+    """HTML entities unescaped, tags stripped, whitespace collapsed."""
     raw = html.unescape(text or "")
     raw = _TAG_RE.sub(" ", raw)
     return " ".join(raw.split())
@@ -881,6 +929,7 @@ def _parse_csv_close(raw: str) -> tuple[Optional[str], str, str]:
 
 
 def _publisher_status_closed(status: str) -> bool:
+    """True when the publisher status names a closed state. Empty or 'open' is not closed."""
     token = (status or "").strip().lower()
     if not token:
         return False
@@ -918,6 +967,7 @@ def _csv_row_field_overflow(row: dict) -> Optional[str]:
 
 
 def _coerce_csv_dict_row(row: object) -> tuple[Optional[dict], str]:
+    """DictReader row to a plain dict, or (None, reason) when it cannot be trusted."""
     if not isinstance(row, dict):
         return None, "malformed_row:not_dict"
     if None in row:
@@ -943,6 +993,18 @@ def _set_csv_parser_field_limit() -> int:
     except OverflowError:
         csv.field_size_limit(sys.maxsize)
     return previous
+
+
+def _csv_status_contradiction(status: str, deadline: Optional[str], today: date) -> str:
+    """'Open' with a past close is a contradiction to surface, never a confirmed-open."""
+    if status.lower() != "open" or not deadline:
+        return ""
+    try:
+        if date.fromisoformat(deadline) < today:
+            return "publisher_open_but_close_date_past"
+    except ValueError:
+        pass
+    return ""
 
 
 def _normalize_csv_row(
@@ -983,13 +1045,7 @@ def _normalize_csv_row(
         if close_at
         else "deadline_absent"
     )
-    status_contradiction = ""
-    if status.lower() == "open" and deadline:
-        try:
-            if date.fromisoformat(deadline) < today:
-                status_contradiction = "publisher_open_but_close_date_past"
-        except ValueError:
-            pass
+    status_contradiction = _csv_status_contradiction(status, deadline, today)
     opp = {
         "id": _make_id(data_id, url, title, source),
         "title": title[:300],
@@ -1017,6 +1073,12 @@ def _normalize_csv_row(
         "detail_url_unknown": not bool(url),
     }
     return opp, "ok"
+
+
+def _tally_rejection(stats: dict, rejection_reasons: dict, reason: str) -> None:
+    """Count one rejected row under its reason. Rejections are data, not silence."""
+    stats["rejected_rows"] += 1
+    rejection_reasons[reason] = rejection_reasons.get(reason, 0) + 1
 
 
 def parse_opportunities_canadabuys_csv(
@@ -1091,8 +1153,7 @@ def parse_opportunities_canadabuys_csv(
                 break
             coerced, coerce_reason = _coerce_csv_dict_row(row)
             if coerced is None:
-                stats["rejected_rows"] += 1
-                rejection_reasons[coerce_reason] = rejection_reasons.get(coerce_reason, 0) + 1
+                _tally_rejection(stats, rejection_reasons, coerce_reason)
                 continue
             opp, reason = _normalize_csv_row(
                 row=coerced,
@@ -1104,8 +1165,7 @@ def parse_opportunities_canadabuys_csv(
                 today=today,
             )
             if opp is None:
-                stats["rejected_rows"] += 1
-                rejection_reasons[reason] = rejection_reasons.get(reason, 0) + 1
+                _tally_rejection(stats, rejection_reasons, reason)
                 continue
             stats["valid_rows"] += 1
             if opp.get("raw_keywords_matched") or opp.get("capability_markers"):
@@ -1206,16 +1266,19 @@ def scout_source_body(
     return opps, feed
 
 
+# Parse outcome to feed status. A failed parse is never reported as healthy.
+_CSV_OUTCOME_STATUS = {
+    "schema_drift": "schema_drift",
+    "partial": "partial",
+    "unsupported": "skipped",
+    "fetch_error": "skipped",
+}
+
+
 def _feed_record_from_csv_parse(source: dict, stats: dict, *, how: str) -> dict:
+    """Feed record from CSV parse stats. A failed parse is never a healthy zero."""
     outcome = stats.get("parse_outcome") or "ok"
-    if outcome == "schema_drift":
-        status = "schema_drift"
-    elif outcome in ("partial", "unsupported"):
-        status = "partial" if outcome == "partial" else "skipped"
-    elif outcome in ("fetch_error",):
-        status = "skipped"
-    else:
-        status = "ok"
+    status = _CSV_OUTCOME_STATUS.get(outcome, "ok")
     return {
         "id": source["id"],
         "name": source.get("name") or source["id"],
@@ -1252,12 +1315,21 @@ def _feed_record_from_csv_parse(source: dict, stats: dict, *, how: str) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# §5 — Cache and fetch: polite, bounded, truncation-honest
+#
+# A cache entry older than CACHE_TTL_SECONDS is a miss. A truncated response
+# is a partial feed, never a healthy zero.
+# ---------------------------------------------------------------------------
+
 def cache_file(cache_dir: Path, url: str) -> Path:
+    """Cache path for a URL: sha256 of the URL, so no unsafe characters reach the disk."""
     digest = hashlib.sha256(url.encode("utf-8")).hexdigest()[:24]
     return Path(cache_dir) / f"{digest}.json"
 
 
 def _cache_fetched_at(value: object) -> Optional[datetime]:
+    """Parse a cache timestamp. Unparseable stamps count as missing, never as fresh."""
     if not isinstance(value, str) or not value.strip():
         return None
     try:
@@ -1287,6 +1359,7 @@ def cache_is_fresh(
 
 
 def _header_value(headers: object, name: str) -> Optional[str]:
+    """First present header value, with a case-insensitive fallback. None when absent."""
     if headers is None:
         return None
     getter = getattr(headers, "get", None)
@@ -1301,6 +1374,7 @@ def _header_value(headers: object, name: str) -> Optional[str]:
 
 
 def _response_charset(headers: object) -> str:
+    """Charset from headers, defaulting to utf-8. Never raises on junk."""
     charset_getter = getattr(headers, "get_content_charset", None)
     if callable(charset_getter):
         charset = charset_getter()
@@ -1316,6 +1390,7 @@ def _response_charset(headers: object) -> str:
 def read_cache_payload(
     cache_dir: Path, url: str, *, now: Optional[datetime] = None
 ) -> Optional[dict]:
+    """Fresh cache payload or None. Expired or unreadable entries are misses, not errors."""
     path = cache_file(cache_dir, url)
     if not path.exists():
         return None
@@ -1336,6 +1411,7 @@ def read_cache_payload(
 
 
 def read_cache(cache_dir: Path, url: str, *, now: Optional[datetime] = None) -> Optional[str]:
+    """Cached body or None."""
     payload = read_cache_payload(cache_dir, url, now=now)
     if payload is None:
         return None
@@ -1344,6 +1420,7 @@ def read_cache(cache_dir: Path, url: str, *, now: Optional[datetime] = None) -> 
 
 
 def write_cache(cache_dir: Path, url: str, body: str) -> None:
+    """Atomic cache write: tmp file then replace, so readers never see a half write."""
     path = cache_file(cache_dir, url)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -1445,11 +1522,20 @@ def _is_transient(exc: BaseException) -> bool:
     return isinstance(exc, (TimeoutError, URLError))
 
 
+# ---------------------------------------------------------------------------
+# §6 — Feed health and the scout run: one failure is a skipped feed
+#
+# The scout never raises for a dead source. Health is persisted per feed so
+# a broken parser cannot masquerade as an empty market.
+# ---------------------------------------------------------------------------
+
 def scout_health_path(cache_directory: Path) -> Path:
+    """Path of the per-feed last-success record."""
     return Path(cache_directory) / "scout-health.json"
 
 
 def _load_scout_health(path: Path) -> dict:
+    """Last-success map. Unreadable files start empty rather than failing the run."""
     if not path.exists():
         return {"feeds": {}}
     try:
@@ -1464,6 +1550,7 @@ def _load_scout_health(path: Path) -> dict:
 
 
 def _save_scout_health(path: Path, state: dict) -> None:
+    """Atomic health write: tmp file then replace."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -1471,6 +1558,7 @@ def _save_scout_health(path: Path, state: dict) -> None:
 
 
 def _days_since(today: date, last_success: object) -> Optional[int]:
+    """Days since an ISO date, or None when the last success is unknown."""
     if not isinstance(last_success, str) or not last_success:
         return None
     try:
@@ -1481,6 +1569,7 @@ def _days_since(today: date, last_success: object) -> Optional[int]:
 
 
 def _days_phrase(days: Optional[int]) -> str:
+    """Human phrase for a day count, for the health summary."""
     if days is None:
         return "never succeeded"
     if days == 1:
@@ -1543,6 +1632,284 @@ def summarize_scout_health(
     }
 
 
+def _skipped_feed(source_id: str, url: str, exc: BaseException) -> tuple[str, str, str, bool]:
+    """A dead feed becomes a skipped record, never a raised error."""
+    error = f"{type(exc).__name__}: {exc}"
+    log.warning("skip feed %s %s (%s)", source_id, url, error)
+    return "skipped", error, "error", True
+
+
+def _attach_fetch_meta(feed: dict, fetch_meta: dict) -> None:
+    """Copy byte/truncation metadata from the fetch onto the feed record."""
+    feed["body_bytes_sha256"] = fetch_meta.get("body_bytes_sha256") or ""
+    feed["body_text_sha256"] = fetch_meta.get("body_text_sha256") or ""
+    feed["bytes_read"] = fetch_meta.get("bytes_read")
+    feed["content_length"] = fetch_meta.get("content_length")
+
+
+def _cache_hit_fetch_meta(body: str, fetched_at: object) -> dict:
+    """Synthetic fetch metadata for a cache hit: nothing truncated, nothing fetched."""
+    return {
+        "truncated": False,
+        "body_text_sha256": _sha256_text(body),
+        "body_bytes_sha256": "",
+        "bytes_read": len(body.encode("utf-8")),
+        "content_length": None,
+        "fetched_at": fetched_at,
+        "from_cache": True,
+    }
+
+
+def _resolve_feed_fetched_at(fetch_meta: dict, how: str) -> str:
+    """Prefer the fetch timestamp; a cache hit without one stays 'unknown'."""
+    stamp = fetch_meta.get("fetched_at")
+    if isinstance(stamp, str) and stamp.strip():
+        return stamp
+    if how == "cache":
+        return "unknown"
+    return stamp or datetime.now(timezone.utc).isoformat()
+
+
+def _acquire_body(
+    source: dict,
+    url: str,
+    *,
+    cache_directory: Path,
+    fetcher: Fetcher,
+    sleeper: Sleeper,
+    gap_seconds: float,
+    attempt: int,
+    pending_gap: bool,
+) -> tuple[str, str, dict, bool]:
+    """Return (body, how, fetch_meta, pending_gap). Raises on fetch failure."""
+    source_format = source.get("format") or ""
+    max_bytes = source.get("max_bytes")
+    cached = read_cache(cache_directory, url)
+    if attempt == 0 and cached is not None and fetcher is fetch_url:
+        cache_payload = read_cache_payload(cache_directory, url) or {}
+        return (
+            cached,
+            "cache",
+            _cache_hit_fetch_meta(cached, cache_payload.get("fetched_at")),
+            pending_gap,
+        )
+    if attempt == 0 and pending_gap:
+        sleeper(gap_seconds)
+    elif attempt > 0:
+        sleeper(config.RETRY_BACKOFF_SECONDS)
+    pending_gap = False
+    if source_format == "canadabuys_csv":
+        fetch_meta = fetch_url_with_meta(
+            url,
+            cache_directory,
+            config.FETCH_TIMEOUT_SECONDS,
+            max_bytes=max_bytes or config.CSV_MAX_BYTES,
+        )
+        body, how = fetch_meta["body"], fetch_meta["how"]
+    else:
+        body, how = fetcher(url, cache_directory, config.FETCH_TIMEOUT_SECONDS)
+        fetch_meta = {
+            "truncated": False,
+            "body_text_sha256": _sha256_text(body),
+            "body_bytes_sha256": "",
+            "bytes_read": len(body.encode("utf-8")),
+            "content_length": None,
+        }
+    if how == "fetched":
+        pending_gap = True
+    return body, how, fetch_meta, pending_gap
+
+
+def _truncated_csv_feed(
+    source: dict, how: str, fetch_meta: dict, max_bytes: Optional[int]
+) -> tuple[list[dict], dict, str, str]:
+    """A truncated response is a partial feed, never a parsed one."""
+    error = (
+        f"response truncated at {fetch_meta.get('bytes_read')} bytes "
+        f"(limit {max_bytes or config.CSV_MAX_BYTES})"
+    )
+    csv_stats = {
+        "parse_outcome": "partial",
+        "truncated": True,
+        "raw_rows": 0,
+        "valid_rows": 0,
+        "rejected_rows": 0,
+        "lens_matches": 0,
+        "displayed_rows": 0,
+        "body_text_sha256": fetch_meta.get("body_text_sha256") or "",
+    }
+    feed_extra = _feed_record_from_csv_parse(source, csv_stats, how=how)
+    _attach_fetch_meta(feed_extra, fetch_meta)
+    feed_extra["status"] = "partial"
+    feed_extra["error"] = error
+    return [], feed_extra, "partial", error
+
+
+def _parsed_csv_feed(
+    source: dict,
+    body: str,
+    how: str,
+    fetch_meta: dict,
+    today: date,
+    snapshot_root: Optional[Path],
+) -> tuple[list[dict], dict, str, str]:
+    """Parse one CSV body; stamp acquisition; decide feed status from the parse outcome."""
+    url = source["url"]
+    found, csv_stats = parse_opportunities_canadabuys_csv(
+        body,
+        source=source["id"],
+        page_url=url,
+        source_name=source.get("name") or source["id"],
+        source_kind=source.get("kind") or "tender",
+        dataset_url=source.get("dataset_url") or url,
+        today=today,
+    )
+    feed_extra = _feed_record_from_csv_parse(source, csv_stats, how=how)
+    _attach_fetch_meta(feed_extra, fetch_meta)
+    feed_extra["fetched_at"] = _resolve_feed_fetched_at(fetch_meta, how)
+    feed_extra["live_fetch"] = how == "fetched"
+    if csv_stats.get("parse_outcome") == "schema_drift":
+        status = "schema_drift"
+        error = "missing headers: " + ", ".join(csv_stats.get("missing_headers") or [])
+    elif csv_stats.get("parse_outcome") == "partial":
+        status = "partial"
+        if csv_stats.get("csv_parse_errors"):
+            error = "csv parse error: " + (csv_stats.get("parse_error") or "malformed record")
+        else:
+            error = "row or byte cap hit during parse"
+    else:
+        status = feed_extra.get("status") or "ok"
+        error = ""
+    feed_extra["status"] = status
+    feed_extra["error"] = error
+    _apply_acquisition_stamp(
+        found,
+        source=source,
+        body=body,
+        how=how,
+        fetched_at=feed_extra.get("fetched_at"),
+        live_fetch=how == "fetched",
+        body_text_sha256=feed_extra.get("body_text_sha256") or _sha256_text(body),
+        body_bytes_sha256=feed_extra.get("body_bytes_sha256") or "",
+        parse_outcome=str(feed_extra.get("parse_outcome") or "ok"),
+        truncated=bool(fetch_meta.get("truncated")),
+        offline=False,
+        snapshot_root=snapshot_root,
+    )
+    ref = (found[0].get("source_snapshot_ref") if found else "") or ""
+    if ref:
+        feed_extra["source_snapshot_ref"] = ref
+    warn = (found[0].get("evidence_persistence_warning") if found else "") or ""
+    if warn:
+        feed_extra["evidence_persistence_warning"] = warn
+    return found, feed_extra, status, error
+
+
+def _scout_csv_source(
+    source: dict,
+    body: str,
+    how: str,
+    fetch_meta: dict,
+    today: date,
+    snapshot_root: Optional[Path],
+) -> tuple[list[dict], dict, str, str]:
+    """Handle one CanadaBuys CSV body. Returns (found, feed, status, error)."""
+    if fetch_meta.get("truncated"):
+        return _truncated_csv_feed(source, how, fetch_meta, source.get("max_bytes"))
+    return _parsed_csv_feed(source, body, how, fetch_meta, today, snapshot_root)
+
+
+def _scout_html_source(source: dict, body: str) -> tuple[list[dict], str, str]:
+    """Parse one HTML body. Zero rows is logged, never treated as failure."""
+    found = parse_opportunities_html(
+        body,
+        source=source["id"],
+        page_url=source["url"],
+        source_name=source.get("name") or source["id"],
+        source_kind=source.get("kind") or "default",
+    )
+    if not found:
+        log.warning(
+            "feed %s parsed 0 opportunities (page shape may have changed or no lens hit)",
+            source["id"],
+        )
+    return found, "ok", ""
+
+
+def _scout_source(
+    source: dict,
+    *,
+    cache_directory: Path,
+    fetcher: Fetcher,
+    sleeper: Sleeper,
+    gap_seconds: float,
+    today: date,
+    snapshot_root: Optional[Path],
+    pending_gap: bool,
+) -> tuple[list[dict], Optional[dict], str, str, str, bool]:
+    """Fetch and parse one source, with one retry on transient failure.
+
+    Never raises: failures become skipped feeds. Returns
+    (found, feed_extra, status, error, how, pending_gap).
+    """
+    url = source["url"]
+    attempt = 0
+    while True:
+        try:
+            body, how, fetch_meta, pending_gap = _acquire_body(
+                source,
+                url,
+                cache_directory=cache_directory,
+                fetcher=fetcher,
+                sleeper=sleeper,
+                gap_seconds=gap_seconds,
+                attempt=attempt,
+                pending_gap=pending_gap,
+            )
+            if (source.get("format") or "") == "canadabuys_csv":
+                found, feed_extra, status, error = _scout_csv_source(
+                    source, body, how, fetch_meta, today, snapshot_root
+                )
+            else:
+                found, status, error = _scout_html_source(source, body)
+                feed_extra = None
+            return found, feed_extra, status, error, how, pending_gap
+        except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
+            if attempt < 1 and _is_transient(exc):
+                attempt += 1
+                log.warning("retry feed %s after transient %s", source["id"], exc)
+                continue
+            status, error, how, pending_gap = _skipped_feed(source["id"], url, exc)
+            return [], None, status, error, how, pending_gap
+        except Exception as exc:
+            status, error, how, pending_gap = _skipped_feed(source["id"], url, exc)
+            return [], None, status, error, how, pending_gap
+
+
+def _html_feed_record(
+    source: dict, url: str, found: list[dict], status: str, error: str, how: str
+) -> dict:
+    """Feed record for an HTML source. Zero rows is empty_valid, never proof of coverage."""
+    return {
+        "id": source["id"],
+        "name": source.get("name") or source["id"],
+        "url": url,
+        "status": status,
+        "how": how,
+        "error": error,
+        "opportunities": len(found),
+        "parse_outcome": "empty_valid" if status == "ok" and not found else "ok",
+        "coverage_scope": source.get("coverage_scope") or "",
+        "coverage_warning": (
+            "HTML listing parse; zero rows is not proof of a healthy empty market "
+            "when fetch/parse support is unresolved."
+            if source.get("kind") in config.LISTING_KINDS
+            else ""
+        ),
+        "transport_hardening": "unresolved",
+    }
+
+
 def scout(
     sources: Optional[Union[tuple[dict, ...], list[dict]]] = None,
     cache_directory: Optional[Path] = None,
@@ -1567,204 +1934,20 @@ def scout(
     opportunities = []
     pending_gap = False
     for source in sources:
-        url = source["url"]
-        status = "ok"
-        error = ""
-        how = ""
-        found: list[dict] = []
-        csv_stats: dict = {}
-        attempt = 0
-        source_format = source.get("format") or ""
-        max_bytes = source.get("max_bytes")
-        feed_extra: Optional[dict] = None
-        while True:
-            try:
-                cached = read_cache(cache_directory, url)
-                if attempt == 0 and cached is not None and fetcher is fetch_url:
-                    body, how = cached, "cache"
-                    cache_payload = read_cache_payload(cache_directory, url) or {}
-                    fetch_meta = {
-                        "truncated": False,
-                        "body_text_sha256": _sha256_text(body),
-                        "body_bytes_sha256": "",
-                        "bytes_read": len(body.encode("utf-8")),
-                        "content_length": None,
-                        "fetched_at": cache_payload.get("fetched_at"),
-                        "from_cache": True,
-                    }
-                else:
-                    if attempt == 0 and pending_gap:
-                        sleeper(gap_seconds)
-                    elif attempt > 0:
-                        sleeper(config.RETRY_BACKOFF_SECONDS)
-                    pending_gap = False
-                    if source_format == "canadabuys_csv":
-                        fetch_meta = fetch_url_with_meta(
-                            url,
-                            cache_directory,
-                            config.FETCH_TIMEOUT_SECONDS,
-                            max_bytes=max_bytes or config.CSV_MAX_BYTES,
-                        )
-                        body = fetch_meta["body"]
-                        how = fetch_meta["how"]
-                    else:
-                        body, how = fetcher(
-                            url,
-                            cache_directory,
-                            config.FETCH_TIMEOUT_SECONDS,
-                        )
-                        fetch_meta = {
-                            "truncated": False,
-                            "body_text_sha256": _sha256_text(body),
-                            "body_bytes_sha256": "",
-                            "bytes_read": len(body.encode("utf-8")),
-                            "content_length": None,
-                        }
-                    if how == "fetched":
-                        pending_gap = True
-                if source_format == "canadabuys_csv":
-                    if fetch_meta.get("truncated"):
-                        status = "partial"
-                        error = (
-                            f"response truncated at {fetch_meta.get('bytes_read')} bytes "
-                            f"(limit {max_bytes or config.CSV_MAX_BYTES})"
-                        )
-                        found = []
-                        csv_stats = {
-                            "parse_outcome": "partial",
-                            "truncated": True,
-                            "raw_rows": 0,
-                            "valid_rows": 0,
-                            "rejected_rows": 0,
-                            "lens_matches": 0,
-                            "displayed_rows": 0,
-                            "body_text_sha256": fetch_meta.get("body_text_sha256") or "",
-                        }
-                        feed_extra = _feed_record_from_csv_parse(source, csv_stats, how=how)
-                        feed_extra["body_bytes_sha256"] = fetch_meta.get("body_bytes_sha256") or ""
-                        feed_extra["body_text_sha256"] = fetch_meta.get("body_text_sha256") or ""
-                        feed_extra["bytes_read"] = fetch_meta.get("bytes_read")
-                        feed_extra["content_length"] = fetch_meta.get("content_length")
-                        feed_extra["status"] = "partial"
-                        feed_extra["error"] = error
-                        break
-                    found, csv_stats = parse_opportunities_canadabuys_csv(
-                        body,
-                        source=source["id"],
-                        page_url=url,
-                        source_name=source.get("name") or source["id"],
-                        source_kind=source.get("kind") or "tender",
-                        dataset_url=source.get("dataset_url") or url,
-                        today=today,
-                    )
-                    feed_extra = _feed_record_from_csv_parse(source, csv_stats, how=how)
-                    feed_extra["body_bytes_sha256"] = fetch_meta.get("body_bytes_sha256") or ""
-                    feed_extra["body_text_sha256"] = fetch_meta.get("body_text_sha256") or ""
-                    feed_extra["bytes_read"] = fetch_meta.get("bytes_read")
-                    feed_extra["content_length"] = fetch_meta.get("content_length")
-                    stamp = fetch_meta.get("fetched_at")
-                    if isinstance(stamp, str) and stamp.strip():
-                        feed_extra["fetched_at"] = stamp
-                    elif how == "cache":
-                        feed_extra["fetched_at"] = "unknown"
-                    else:
-                        feed_extra["fetched_at"] = stamp or datetime.now(timezone.utc).isoformat()
-                    feed_extra["live_fetch"] = how == "fetched"
-                    if csv_stats.get("parse_outcome") == "schema_drift":
-                        status = "schema_drift"
-                        error = "missing headers: " + ", ".join(csv_stats.get("missing_headers") or [])
-                    elif csv_stats.get("parse_outcome") == "partial":
-                        status = "partial"
-                        if csv_stats.get("csv_parse_errors"):
-                            error = (
-                                "csv parse error: "
-                                + (csv_stats.get("parse_error") or "malformed record")
-                            )
-                        else:
-                            error = "row or byte cap hit during parse"
-                    else:
-                        status = feed_extra.get("status") or "ok"
-                        error = ""
-                    feed_extra["status"] = status
-                    feed_extra["error"] = error
-                    _apply_acquisition_stamp(
-                        found,
-                        source=source,
-                        body=body,
-                        how=how,
-                        fetched_at=feed_extra.get("fetched_at"),
-                        live_fetch=how == "fetched",
-                        body_text_sha256=feed_extra.get("body_text_sha256") or _sha256_text(body),
-                        body_bytes_sha256=feed_extra.get("body_bytes_sha256") or "",
-                        parse_outcome=str(feed_extra.get("parse_outcome") or "ok"),
-                        truncated=bool(fetch_meta.get("truncated")),
-                        offline=False,
-                        snapshot_root=snapshot_root,
-                    )
-                    ref = (found[0].get("source_snapshot_ref") if found else "") or ""
-                    if ref:
-                        feed_extra["source_snapshot_ref"] = ref
-                    warn = (found[0].get("evidence_persistence_warning") if found else "") or ""
-                    if warn:
-                        feed_extra["evidence_persistence_warning"] = warn
-                    break
-                found = parse_opportunities_html(
-                    body,
-                    source=source["id"],
-                    page_url=url,
-                    source_name=source.get("name") or source["id"],
-                    source_kind=source.get("kind") or "default",
-                )
-                if not found:
-                    log.warning(
-                        "feed %s parsed 0 opportunities (page shape may have changed or no lens hit)",
-                        source["id"],
-                    )
-                status = "ok"
-                error = ""
-                feed_extra = None
-                break
-            except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
-                if attempt < 1 and _is_transient(exc):
-                    attempt += 1
-                    log.warning("retry feed %s after transient %s", source["id"], exc)
-                    continue
-                status = "skipped"
-                error = f"{type(exc).__name__}: {exc}"
-                how = "error"
-                pending_gap = True
-                log.warning("skip feed %s %s (%s)", source["id"], url, error)
-                break
-            except Exception as exc:
-                status = "skipped"
-                error = f"{type(exc).__name__}: {exc}"
-                how = "error"
-                pending_gap = True
-                log.warning("skip feed %s %s (%s)", source["id"], url, error)
-                break
-        if source_format == "canadabuys_csv" and feed_extra is not None:
+        found, feed_extra, status, error, how, pending_gap = _scout_source(
+            source,
+            cache_directory=cache_directory,
+            fetcher=fetcher,
+            sleeper=sleeper,
+            gap_seconds=gap_seconds,
+            today=today,
+            snapshot_root=snapshot_root,
+            pending_gap=pending_gap,
+        )
+        if (source.get("format") or "") == "canadabuys_csv" and feed_extra is not None:
             feeds.append(feed_extra)
         else:
-            feeds.append(
-                {
-                    "id": source["id"],
-                    "name": source.get("name") or source["id"],
-                    "url": url,
-                    "status": status,
-                    "how": how,
-                    "error": error,
-                    "opportunities": len(found),
-                    "parse_outcome": "empty_valid" if status == "ok" and not found else "ok",
-                    "coverage_scope": source.get("coverage_scope") or "",
-                    "coverage_warning": (
-                        "HTML listing parse; zero rows is not proof of a healthy empty market "
-                        "when fetch/parse support is unresolved."
-                        if source.get("kind") in config.LISTING_KINDS
-                        else ""
-                    ),
-                    "transport_hardening": "unresolved",
-                }
-            )
+            feeds.append(_html_feed_record(source, source["url"], found, status, error, how))
         opportunities.extend(found)
     health = summarize_scout_health(cache_directory, feeds, today=today)
     return {"opportunities": opportunities, "feeds": feeds, "health": health}

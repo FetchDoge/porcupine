@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+dist/
+build/
+
+# Test / cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Runtime artifacts (never commit run output)
+output/
+ledger/
+journal/
+source-snapshots/
+cache/
+
+# Local scratch
+/tmp/
+*.log
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
