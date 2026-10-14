@@ -1,0 +1,9 @@
+{
+ "url": "https://canadabuys.canada.ca/opendata/pub/openTenderNotice-ouvertAvisAppelOffres.csv",
+ "status": 200,
+ "bytes": 6310782,
+ "sha256": "88dbf2a4d1ee0b32278d120cec624ed38335bc73350dca47c4a18455a12738e1",
+ "fetched_at": "2026-10-14T03:00:07.273306+00:00",
+ "method": "plain urllib (guarded path is DNS-blocked on the capture VM; see tests/fixtures/PROVENANCE.md)",
+ "lines": 53106
+}
