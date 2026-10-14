@@ -84,6 +84,7 @@ def sample_capture(csv_path: Path, n: int, seed: int) -> tuple[list[dict], dict]
         enriched["rank"] = rank
         enriched["stratum"] = _stratum(row, all_rows_rejected)
         groups[enriched["stratum"]].append(enriched)
+    stats["strata_available"] = {name: len(groups[name]) for name in STRATA}
     chosen = _allocate(groups, max(0, n), random.Random(seed))
     return chosen, stats
 
@@ -122,6 +123,13 @@ def write_sheet(path: Path, rows: list[dict], seed: int, stats: dict) -> None:
     buf.write(f"# sampler_seed={seed}\n")
     buf.write(f"# rubric_version={RUBRIC_VERSION}\n")
     buf.write("# unavailable_strata=" + (",".join(unavailable) or "none") + "\n")
+    if "strata_available" in stats:
+        counts = stats["strata_available"]
+        buf.write(
+            "# strata_available="
+            + ",".join(f"{name}:{counts[name]}" for name in STRATA)
+            + "\n"
+        )
     buf.write(
         f"# parse_outcome={stats['parse_outcome']};raw_rows={stats['raw_rows']};"
         f"valid_rows={stats['valid_rows']};rejected_rows={stats['rejected_rows']}\n"

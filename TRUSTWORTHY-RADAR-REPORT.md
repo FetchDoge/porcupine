@@ -72,7 +72,7 @@ Feed-level fields in `feeds.json` mirror the same acquisition; each scored oppor
 
 ## Residual limitations — stated, not hidden
 
-1. **Transport / SSRF:** `transport_hardening: unresolved` — `_allowed_url` on card links only, not fetch redirects.
+1. **Transport / SSRF:** fetch-path coverage verified end-to-end (2026-10-13). The sole fetch entry (`fetch_url_with_meta`) routes the initial URL and every redirect hop through `netguard` validation: http(s) only, no userinfo, destination must not resolve to private/loopback/link-local/multicast/reserved space, 5-hop cap, https→http downgrade redirects refused, and environment proxy variables disabled so a proxy cannot reroute a fetch around validation. Record: `tests/test_netguard_endtoend.py` drives scripted redirect chains through the real opener and proves blocked hops (127.0.0.1, 169.254.169.254, ::1, private ranges, userinfo, ftp) are refused before connecting. **Residual:** DNS TOCTOU — validation-time resolution and connect-time resolution are separate lookups and may return different addresses; not eliminated. Separately, feed metadata still emits `transport_hardening: unresolved` — that label predates this verification and has not yet been split into fetch-path coverage vs. replay provenance.
 2. **Coverage:** Federal open-tender CSV primary; IDEaS HTML captures not repaired.
 3. **HTML listing zero rows:** Still not proof of healthy empty market (`coverage_warning`).
 4. **Ranking:** Still keyword/heuristic-driven; EV is not financial return.

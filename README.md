@@ -70,6 +70,8 @@ python3 -m porcupine.cli journal --help
 
 The live run uses configured timeouts, a delay between network fetches, and a local cache. A failed feed is recorded and skipped rather than represented as successful coverage.
 
+New here? [examples/](examples/README.md) walks one offline replay end to end — the five feed states, a scoring trace read line by line, and a run that finds nothing — in about five minutes.
+
 ## Outputs
 
 - `output/ranked.md` and `output/ranked.json`: ranked, traced records.
@@ -77,7 +79,7 @@ The live run uses configured timeouts, a delay between network fetches, and a lo
 - `output/drafts/`: drafts allowed by the CLI's gating rules.
 - `output/NO-OPEN-DRAFT.md`: explicit no-open-result artifact.
 - `ledger/porcupine.jsonl`: append-only opportunity ledger.
-- `journal/porcupine-journal.jsonl`: append-only decision journal.
+- `ledger/journal.jsonl`: append-only decision journal.
 
 ## Score
 

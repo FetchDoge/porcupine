@@ -1,9 +1,16 @@
 """Guard outbound HTTP fetches against unsafe destinations and redirects.
 
 This reduces SSRF exposure by validating the initial URL and every redirect
-target.  It does not eliminate DNS TOCTOU risk: validation-time resolution and
-the HTTP client's connect-time resolution are separate and may return different
-addresses.
+target.  The opener is built with an explicit empty proxy map: environment
+proxy variables must not reroute a fetch around destination validation (a
+proxy resolves and connects on our behalf, so the validated addresses would
+no longer describe the actual connection).  A redirect that downgrades
+https to http is refused: cleartext is never an acceptable landing for a
+feed that started encrypted.
+
+Residual risk, stated plainly: this does not eliminate DNS TOCTOU risk.
+Validation-time resolution and the HTTP client's connect-time resolution
+are separate lookups and may return different addresses.
 """
 
 from __future__ import annotations
@@ -12,7 +19,7 @@ import ipaddress
 import socket
 from typing import Optional
 from urllib.parse import urljoin, urlsplit
-from urllib.request import HTTPRedirectHandler, Request, build_opener
+from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_opener
 
 MAX_REDIRECT_HOPS = 5
 
@@ -89,6 +96,13 @@ class _GuardedRedirectHandler(HTTPRedirectHandler):
             raise NetGuardError(
                 f"redirect limit exceeded ({MAX_REDIRECT_HOPS})", candidate_chain
             )
+        if (
+            urlsplit(req.full_url).scheme.lower() == "https"
+            and urlsplit(target).scheme.lower() == "http"
+        ):
+            raise NetGuardError(
+                "redirect downgrades https to http", candidate_chain
+            )
         _validate_url(target, candidate_chain)
         redirected = super().redirect_request(req, fp, code, msg, headers, target)
         if redirected is not None:
@@ -101,7 +115,7 @@ def guarded_urlopen(request: Request, timeout: float):
     initial_url = request.full_url
     hop_chain = [initial_url]
     _validate_url(initial_url, hop_chain)
-    opener = build_opener(_GuardedRedirectHandler(hop_chain))
+    opener = build_opener(_GuardedRedirectHandler(hop_chain), ProxyHandler({}))
     try:
         response = opener.open(request, timeout=timeout)
     except NetGuardError:

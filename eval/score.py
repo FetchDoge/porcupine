@@ -21,7 +21,15 @@ def _read(path: Path) -> tuple[list[dict], dict[str, str]]:
                 metadata[key.strip()] = value.strip()
         else:
             data.append(line)
-    all_rows = list(csv.DictReader(io.StringIO("\n".join(data))))
+    reader = csv.DictReader(io.StringIO("\n".join(data)))
+    if reader.fieldnames:
+        missing = [name for name in ("human_label", "predicted_label")
+                   if name not in reader.fieldnames]
+        if missing:
+            raise ValueError(
+                "labels file is missing required column(s): " + ", ".join(missing)
+            )
+    all_rows = list(reader)
     if "rubric_version" not in metadata:
         metadata["rubric_version"] = next(
             (row.get("rubric_version", "") for row in all_rows if row.get("rubric_version")),
@@ -33,6 +41,19 @@ def _read(path: Path) -> tuple[list[dict], dict[str, str]]:
             "unknown",
         )
     rows = [row for row in all_rows if row.get("example", "").strip().lower() != "true"]
+    seen = set()
+    for row in rows:
+        if not (row.get("human_label") or "").strip():
+            continue
+        key = (row.get("opportunity_id") or "", row.get("component") or "")
+        if key in seen:
+            raise ValueError(
+                f"duplicate labeled row for opportunity_id={key[0]!r} "
+                f"component={key[1]!r}: adjudicate to one final label before scoring"
+            )
+        seen.add(key)
+    metadata["rows_in_file"] = str(len(all_rows))
+    metadata["example_rows"] = str(len(all_rows) - len(rows))
     return rows, metadata
 
 
@@ -77,7 +98,14 @@ def build_report(rows: list[dict], metadata: dict[str, str]) -> str:
         (row.get("sampler_seed", "") for row in rows if row.get("sampler_seed")), "unknown"
     )
     overall = _metrics(rows)
-    lines = ["# Evaluation report", "", f"- Rubric version: {rubric}", f"- Sampler seed: {seed}", ""]
+    lines = ["# Evaluation report", "", f"- Rubric version: {rubric}", f"- Sampler seed: {seed}"]
+    if "rows_in_file" in metadata:
+        lines.append(
+            f"- Rows in file: {metadata['rows_in_file']} "
+            f"({metadata.get('example_rows', '0')} example excluded, "
+            f"{len(rows) - overall['n']} unlabeled, {overall['n']} scored)"
+        )
+    lines.append("")
     if overall["positive"] == 0:
         lines.extend(["## Result", "", "**Insufficient labels:** the scored rows contain zero positive (`fit`) labels.", ""])
     lines.extend([
