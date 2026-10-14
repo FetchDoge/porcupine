@@ -33,7 +33,7 @@ log = logging.getLogger("porcupine.radar")
 # Pure functions over page text. Nothing here touches the network or the disk.
 # ---------------------------------------------------------------------------
 
-_ARTICLE = re.compile(r"(?is)<article\b([^>]*)>(.*?)</article>")
+_ARTICLE_TAG = re.compile(r"(?is)<article\b([^>]*)>|</article\s*>")
 _DATA_ID = re.compile(r"(?i)\bdata-id\s*=\s*[\"']([^\"']+)[\"']")
 _ISO_DATE = re.compile(r"\b(20[0-9]{2})-(\d{2})-(\d{2})\b")
 _MONTHS = {
@@ -329,10 +329,12 @@ def sanitize_markdown(text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# §2 — HTML parsing: articles and listing links to normalized opportunities
+# §2 — HTML parsing: articles, listing links, and program-page sections
 #
-# Two card shapes: <article> fragments and bare links on listing pages.
-# Both funnel through _normalize_html_card so one gate decides what exists.
+# Three card shapes: <article> fragments, bare links on listing pages, and
+# heading-delimited sections on program pages (DESIGN-v2 §3). All funnel
+# through _normalize_html_card so one gate decides what exists. A shape that
+# yields zero never suppresses the next shape for that page kind.
 # ---------------------------------------------------------------------------
 
 def _allowed_url(url: str, page_url: str) -> str:
@@ -464,11 +466,42 @@ class _SectionParser(HTMLParser):
             self.link_buf.append(data)
 
 
+def _article_fragments(html: str) -> list[tuple[str, str]]:
+    """Outermost <article> (attrs, body) pairs, in document order.
+
+    Depth-aware: a nested <article> does not end the outer card early (the
+    old non-greedy regex truncated the outer card at the inner close tag and
+    lost everything after it). An unclosed article yields nothing, and a
+    stray close tag is ignored — the same honesty as before, minus the
+    silent truncation.
+    """
+    fragments: list[tuple[str, str]] = []
+    depth = 0
+    start = 0
+    attrs = ""
+    for match in _ARTICLE_TAG.finditer(html):
+        if match.group(1) is not None:  # open tag; group 1 is its attributes
+            if match.group(0).rstrip().endswith("/>"):
+                continue  # self-closing: no body, never a card
+            if depth == 0:
+                start = match.end()
+                attrs = match.group(1)
+            depth += 1
+        else:  # close tag
+            if depth == 0:
+                continue
+            depth -= 1
+            if depth == 0:
+                fragments.append((attrs, html[start : match.start()]))
+    return fragments
+
+
 def _extract_articles(html: str) -> list[dict]:
     """Split <article> cards into title/text/url triples; skips oversized or empty sections."""
+    fragments = _article_fragments(html)
+    qualify = len(fragments) > 1
     cards = []
-    for match in _ARTICLE.finditer(html):
-        attrs, body = match.group(1), match.group(2)
+    for article_no, (attrs, body) in enumerate(fragments, 1):
         data_id_match = _DATA_ID.search(attrs)
         data_id = data_id_match.group(1) if data_id_match else ""
         parser = _SectionParser()
@@ -493,6 +526,11 @@ def _extract_articles(html: str) -> list[dict]:
                 section_id = data_id
             elif data_id:
                 section_id = f"{data_id}-{index}"
+            elif qualify:
+                # No data-id and several articles on the page: a bare
+                # "section-N" would collide across articles and the dedup
+                # in _cards_to_opportunities would silently drop cards.
+                section_id = f"section-{article_no}-{index}"
             else:
                 section_id = f"section-{index}"
             cards.append(
@@ -568,6 +606,99 @@ class _LinkParser(HTMLParser):
                 self.pending = None
 
 
+class _PageSectionParser(HTMLParser):
+    """Split a whole page into heading-delimited sections, chrome excluded.
+
+    Program pages in the canada.ca WET shape carry their challenges as
+    headed sections of the main content, not as <article> cards and not as
+    listing links. DESIGN-v2 §3 names that shape the primary source.
+    Sections start at h2/h3 headings; nav, footer, header, and aside
+    content never reaches a section.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.sections: list[dict] = []
+        self.current: Optional[dict] = None
+        self.in_h = False
+        self.heading_buf: list[str] = []
+        self._chrome_depth = 0
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
+        if tag in _CHROME_TAGS:
+            self._chrome_depth += 1
+            return
+        if self._chrome_depth:
+            return
+        if tag in ("h2", "h3"):
+            self.in_h = True
+            self.heading_buf = []
+            return
+        if tag == "a" and not self.in_h and self.current is not None and not self.current["url"]:
+            ad = {key: (value or "") for key, value in attrs}
+            href = ad.get("href") or ""
+            if href and not href.startswith(("#", "javascript:", "mailto:")):
+                self.current["url"] = href
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _CHROME_TAGS and self._chrome_depth:
+            self._chrome_depth -= 1
+            return
+        if tag in ("h2", "h3") and self.in_h:
+            self.in_h = False
+            title = " ".join("".join(self.heading_buf).split())
+            if title:
+                self.current = {"title": title, "url": "", "parts": []}
+                self.sections.append(self.current)
+
+    def handle_data(self, data: str) -> None:
+        if self._chrome_depth:
+            return
+        if self.in_h:
+            self.heading_buf.append(data)
+            return
+        if self.current is not None:
+            self.current["parts"].append(data)
+
+
+def _extract_page_sections(html: str) -> list[dict]:
+    """Heading sections of a program page as cards, when opportunity-shaped.
+
+    A section counts only with a heading title AND at least one opportunity
+    signal: a usable link, a money amount, or a labeled deadline. Program
+    prose with none of these is information, not a card. The lens gate in
+    _normalize_html_card still decides what becomes an opportunity; zero
+    cards from a page is a parse outcome, never a healthy empty market.
+    """
+    parser = _PageSectionParser()
+    try:
+        parser.feed(html)
+        parser.close()
+    except Exception as exc:
+        log.warning("page section parse failed: %s", exc)
+        return []
+    cards = []
+    for section in parser.sections:
+        text = " ".join("".join(section["parts"]).split())
+        title = " ".join((section["title"] or "").split())
+        if len(text) > config.MAX_CARD_CHARS:
+            log.warning("skip oversized page section %s (%s chars)", title[:40], len(text))
+            continue
+        if not title:
+            continue
+        if not section["url"] and not _funding_amounts(text) and parse_deadline(text)[0] is None:
+            continue
+        cards.append({"data_id": "", "url": section["url"], "title": title, "text": text})
+    if len(cards) > 1:
+        # Sections on one page often share a single "details" URL; without
+        # a per-section id they collide on the URL slug in _make_id and the
+        # dedup silently drops all but the first. Same convention as the
+        # multi-section article path.
+        for index, card in enumerate(cards, 1):
+            card["data_id"] = f"section-{index}"
+    return cards
+
+
 def _strip_noisy(html: str) -> str:
     html = re.sub(r"(?is)<script\b[^>]*>.*?</script>", " ", html)
     html = re.sub(r"(?is)<style\b[^>]*>.*?</style>", " ", html)
@@ -621,17 +752,41 @@ def parse_opportunities_html(
     cleaned = _strip_noisy(html or "")
     articles = _extract_articles(cleaned)
     if articles:
-        return _cards_to_opportunities(
+        found = _cards_to_opportunities(
             articles,
             source=source,
             source_name=source_name,
             source_kind=source_kind,
             page_url=page_url,
         )
+        if found:
+            return found
+        # Article elements existed but none survived the gate. On Drupal
+        # pages the only <article> elements can be footer furniture
+        # ("useful links" blocks) while the results sit in the page body:
+        # zero from the article shape is a parse outcome for that shape,
+        # not for the page. Fall through to the kind's page-shape fallback.
+        log.info(
+            "feed %s: %d article cards, 0 opportunities; trying page-shape fallback",
+            source,
+            len(articles),
+        )
     # Nav and footer links on homepages are not challenges. The fallback is
     # only for explicit listing pages, and a chrome-context before-window
     # still drops a link that sits under navigation, a footer, or a news menu.
     if source_kind not in config.LISTING_KINDS:
+        if source_kind == "program":
+            # DESIGN-v2 §3: program pages with no <article> must be parsed;
+            # that is the primary-source shape (headed sections, WET pages).
+            sections = _extract_page_sections(cleaned)
+            if sections:
+                return _cards_to_opportunities(
+                    sections,
+                    source=source,
+                    source_name=source_name,
+                    source_kind=source_kind,
+                    page_url=page_url,
+                )
         return []
     links = _LinkParser()
     try:
@@ -1261,6 +1416,7 @@ def scout_source_body(
         "opportunities": len(opps),
         "parse_outcome": "ok" if opps else "empty_valid",
         "coverage_scope": source.get("coverage_scope") or "",
+        "coverage_warning": _html_coverage_warning(source.get("kind") or ""),
         "transport_hardening": "unresolved",
     }
     return opps, feed
@@ -1886,6 +2042,26 @@ def _scout_source(
             return [], None, status, error, how, pending_gap
 
 
+def _html_coverage_warning(source_kind: str) -> str:
+    """Caveat carried by HTML feed records whose shape the parser reads heuristically.
+
+    Zero rows from an HTML page is a parse outcome, never proof of a
+    healthy empty market. Program pages get the same warning as listing
+    pages: the section fallback is a reader for one documented page shape
+    (DESIGN-v2 §3), not a coverage guarantee.
+    """
+    if source_kind in config.LISTING_KINDS:
+        shape = "listing"
+    elif source_kind == "program":
+        shape = "program-page"
+    else:
+        return ""
+    return (
+        f"HTML {shape} parse; zero rows is not proof of a healthy empty market "
+        "when fetch/parse support is unresolved."
+    )
+
+
 def _html_feed_record(
     source: dict, url: str, found: list[dict], status: str, error: str, how: str
 ) -> dict:
@@ -1900,12 +2076,7 @@ def _html_feed_record(
         "opportunities": len(found),
         "parse_outcome": "empty_valid" if status == "ok" and not found else "ok",
         "coverage_scope": source.get("coverage_scope") or "",
-        "coverage_warning": (
-            "HTML listing parse; zero rows is not proof of a healthy empty market "
-            "when fetch/parse support is unresolved."
-            if source.get("kind") in config.LISTING_KINDS
-            else ""
-        ),
+        "coverage_warning": _html_coverage_warning(source.get("kind") or ""),
         "transport_hardening": "unresolved",
     }
 

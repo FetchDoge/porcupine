@@ -88,6 +88,7 @@ TRL_FIT_BUMP = {
 
 # _LinkParser runs only for these kinds. Homepages and job boards are not
 # listing pages; their nav and footer links are not opportunities.
+# Program pages use the heading-section reader instead (DESIGN-v2 §3).
 LISTING_KINDS = ("tender", "award")
 
 FIT_KEYWORD_WEIGHT = 0.65
