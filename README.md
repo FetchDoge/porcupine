@@ -1,6 +1,6 @@
 # PORCUPINE
 
-[![CI](https://github.com/marsojuji-cmyk/porcupine/actions/workflows/ci.yml/badge.svg)](https://github.com/marsojuji-cmyk/porcupine/actions/workflows/ci.yml)
+[![CI](https://github.com/FetchDoge/porcupine/actions/workflows/ci.yml/badge.svg)](https://github.com/FetchDoge/porcupine/actions/workflows/ci.yml)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-98%20passed-green.svg)](tests/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
