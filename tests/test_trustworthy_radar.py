@@ -286,7 +286,7 @@ def test_completely_empty_body_not_empty_valid():
 
 
 def test_all_malformed_rows_not_empty_valid():
-    body = (FIXTURES / "all_rows_rejected.csv").read_text(encoding="utf-8")
+    body = (FIXTURES / "parse_rejected_rows.csv").read_text(encoding="utf-8")
     _opps, stats = parse_opportunities_canadabuys_csv(
         body,
         source="t",

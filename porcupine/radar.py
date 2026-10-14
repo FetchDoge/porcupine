@@ -1417,7 +1417,7 @@ def scout_source_body(
         "parse_outcome": "ok" if opps else "empty_valid",
         "coverage_scope": source.get("coverage_scope") or "",
         "coverage_warning": _html_coverage_warning(source.get("kind") or ""),
-        "transport_hardening": "unresolved",
+        "transport_hardening": _transport_hardening("replay" if offline_replay else "body"),
     }
     return opps, feed
 
@@ -1465,7 +1465,7 @@ def _feed_record_from_csv_parse(source: dict, stats: dict, *, how: str) -> dict:
             "Primary CSV covers federal open tender notices only; "
             "not all Canadian procurement or the full IDEaS HTML market."
         ),
-        "transport_hardening": "unresolved",
+        "transport_hardening": _transport_hardening(how),
         "source_kind": source.get("kind") or "tender",
         "source_format": source.get("format") or "canadabuys_csv",
     }
@@ -2062,6 +2062,20 @@ def _html_coverage_warning(source_kind: str) -> str:
     )
 
 
+def _transport_hardening(how: str) -> str:
+    """Transport label for a feed record.
+
+    'guarded' only when this process fetched the body through netguard's
+    guarded opener (how == 'fetch'): scheme/userinfo/destination validated
+    on the initial URL and every redirect hop, proxies neutralized,
+    downgrades refused (tests/test_netguard_endtoend.py). Cache hits,
+    offline replays, and caller-supplied bodies keep 'unresolved' — their
+    fetch provenance is not established by this run. Residual in all cases:
+    DNS TOCTOU between validation and connect; see TRUSTWORTHY-RADAR-REPORT.
+    """
+    return "guarded" if how == "fetch" else "unresolved"
+
+
 def _html_feed_record(
     source: dict, url: str, found: list[dict], status: str, error: str, how: str
 ) -> dict:
@@ -2077,7 +2091,7 @@ def _html_feed_record(
         "parse_outcome": "empty_valid" if status == "ok" and not found else "ok",
         "coverage_scope": source.get("coverage_scope") or "",
         "coverage_warning": _html_coverage_warning(source.get("kind") or ""),
-        "transport_hardening": "unresolved",
+        "transport_hardening": _transport_hardening(how),
     }
 
 

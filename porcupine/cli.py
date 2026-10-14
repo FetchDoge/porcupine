@@ -32,12 +32,12 @@ HELP = """PORCUPINE {version} — assurance radar. Drafts and records. Does not 
 
 Commands:
   run           scout, score, rank, auto-draft top matched+open row, record
-  top [N]       print the top N ledger rows by EV (default 10)
-  draft <id>    write a Heilmeier draft for one recorded opportunity id
-  record-win    increment global win counter (not a verified learning loop)
-  report        counts from the ledger and the last run
+  top [N]       print the top N ledger rows by EV (default 10) [--root DIR]
+  draft <id>    write a Heilmeier draft for one recorded opportunity id [--root DIR]
+  record-win    increment global win counter (not a verified learning loop) [--root DIR]
+  report        counts from the ledger and the last run [--root DIR]
   replay-csv    offline CSV parse (--file PATH --root DIR)
-  journal       log decisions/outcomes or verify the hash chain
+  journal       log decisions/outcomes or verify the hash chain [--root DIR]
 
 """.format(version=__version__)
 
@@ -768,7 +768,14 @@ def cmd_report(root: Optional[Path] = None) -> int:
             payload = json.loads(last.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             payload = {}
-        print(f"last run: {payload.get('generated_at')} high-fit {payload.get('high_fit_open_matches')}")
+        generated = payload.get("generated_at") or "unknown time"
+        high_fit = payload.get("high_fit_open_matches")
+        high_fit_text = (
+            str(high_fit)
+            if isinstance(high_fit, int)
+            else "not recorded (the last run did not report it)"
+        )
+        print(f"last run: {generated} high-fit {high_fit_text}")
         scout_health = payload.get("scout_health") or {}
         if scout_health.get("summary"):
             print(f"scout health: {scout_health['summary']}")
@@ -881,30 +888,76 @@ def _cmd_replay_csv(args: list[str]) -> int:
     return cmd_replay_csv(csv_path, root=root, source_id=source_id)
 
 
+def _root_and_rest(
+    args: list[str], command: str
+) -> Optional[tuple[Optional[Path], list[str]]]:
+    """Split --root PATH out of args. A valueless --root returns None (the
+    caller exits 2): a flag the user typed must never be dropped silently."""
+    root: Optional[Path] = None
+    rest: list[str] = []
+    index = 0
+    while index < len(args):
+        if args[index] == "--root":
+            if index + 1 >= len(args):
+                print(f"{command} --root expects a directory", file=sys.stderr)
+                return None
+            root = Path(args[index + 1])
+            index += 2
+            continue
+        rest.append(args[index])
+        index += 1
+    return root, rest
+
+
 def _cmd_top(args: list[str]) -> int:
-    if not args:
-        return cmd_top(10)
+    parsed = _root_and_rest(args, "top")
+    if parsed is None:
+        return 2
+    root, rest = parsed
+    if len(rest) > 1:
+        print("top takes at most one count", file=sys.stderr)
+        return 2
+    if not rest:
+        return cmd_top(10, root=root)
     try:
-        count = int(args[0])
+        count = int(rest[0])
     except ValueError:
         print("top expects an integer", file=sys.stderr)
         return 2
-    return cmd_top(count)
+    return cmd_top(count, root=root)
 
 
 def _cmd_draft(args: list[str]) -> int:
-    if not args:
-        print("draft expects an id", file=sys.stderr)
+    parsed = _root_and_rest(args, "draft")
+    if parsed is None:
         return 2
-    return cmd_draft(args[0])
+    root, rest = parsed
+    if len(rest) != 1:
+        print("draft expects exactly one id", file=sys.stderr)
+        return 2
+    return cmd_draft(rest[0], root=root)
 
 
 def _cmd_record_win(args: list[str]) -> int:
-    return cmd_record_win()
+    parsed = _root_and_rest(args, "record-win")
+    if parsed is None:
+        return 2
+    root, rest = parsed
+    if rest:
+        print(f"record-win takes no arguments besides --root (got: {' '.join(rest)})", file=sys.stderr)
+        return 2
+    return cmd_record_win(root=root)
 
 
 def _cmd_report(args: list[str]) -> int:
-    return cmd_report()
+    parsed = _root_and_rest(args, "report")
+    if parsed is None:
+        return 2
+    root, rest = parsed
+    if rest:
+        print(f"report takes no arguments besides --root (got: {' '.join(rest)})", file=sys.stderr)
+        return 2
+    return cmd_report(root=root)
 
 
 def _cmd_journal(args: list[str]) -> int:

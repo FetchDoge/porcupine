@@ -2,6 +2,27 @@
 
 All notable changes to PORCUPINE. Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+Fleet pass, 2026-10-13 — five role-mirrored engineering lanes, integrated and verified by the Keeper. Tests: 98 → 170.
+
+### Security
+- Transport hardening verified end-to-end and closed on the fetch path: the sole fetch entry routes the initial URL and every redirect hop through netguard validation. Two gaps found and closed — environment proxies neutralized (a proxy would otherwise resolve/connect instead of the validated addresses) and HTTPS→HTTP downgrade redirects refused. Residual, stated not hidden: DNS TOCTOU between validation and connect.
+- Feed metadata `transport_hardening` split by provenance: `guarded` for bodies fetched in-process through the guarded opener; `unresolved` kept for cache hits, replays, and supplied bodies.
+
+### Feeds
+- IDEaS HTML coverage partially repaired: footer `<article>` blocks no longer short-circuit listing parsing (the live CanadaBuys page parsed to zero; it now yields real opportunities, proven on a byte-pinned capture). Program pages without `<article>` parse via a chrome-excluded section reader. canada.ca remains fetch-blocked from the capture network and the configured awards URL is a verified 404 — both stay visibly partial.
+
+### Evaluation harness
+- Scorer math hand-verified. Missing label columns and duplicate labeled rows now fail loudly instead of silently skewing precision; the sampler records per-stratum availability; reports carry rows-accounting and warn when unlabeled rows hold top-10 ranks (Precision@10 then covers labeled rows only). Classifier precision remains **unmeasured** — human labels required.
+
+### Reliability
+- Ledger concurrent-writer safety measured, not asserted: 128 writers, 120,725 lines verified byte-by-byte — zero torn lines, zero duplicate keys, zero lost appends. No defect found; the measured limit is throughput under contention, far outside production shape. Record: `RELIABILITY-VERIFICATION.md`.
+
+### Usability
+- `examples/` walkthrough: one offline replay end to end — the five feed states, a scoring trace read line by line, and a run that finds nothing (NO-VERIFIED-MATCH), every excerpt verified against real output.
+- CLI fix (issue #7): `top` / `report` / `record-win` / `draft` honor `--root`; a valueless or unknown flag is a loud error, never a silent drop. `report` states explicitly when the last run did not record a high-fit count instead of printing a bare `None`.
+
 ## [1.0.0] — 2026-10-10
 
 First public release.

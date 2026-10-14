@@ -64,6 +64,20 @@ def _truth(value: str) -> bool:
     return token == "fit"
 
 
+def _rank_of(row: dict) -> int:
+    """A row's rank as an int; a missing rank sorts last. A non-integer rank
+    is a data error and fails with the row named — never a bare int() crash."""
+    raw = (row.get("rank") or "").strip()
+    if not raw:
+        return 10**9
+    try:
+        return int(raw)
+    except ValueError:
+        raise ValueError(
+            f"row {row.get('opportunity_id') or '?'}: rank {raw!r} is not an integer"
+        ) from None
+
+
 def _metrics(rows: list[dict]) -> dict:
     evaluated = [row for row in rows if (row.get("human_label") or "").strip()]
     truth = [_truth(row["human_label"]) for row in evaluated]
@@ -74,7 +88,7 @@ def _metrics(rows: list[dict]) -> dict:
     tn = sum(not p and not t for p, t in zip(predicted, truth))
     ordered = sorted(
         zip(evaluated, truth),
-        key=lambda pair: (int(pair[0].get("rank") or 10**9), pair[0].get("opportunity_id") or ""),
+        key=lambda pair: (_rank_of(pair[0]), pair[0].get("opportunity_id") or ""),
     )[:10]
     return {
         "n": len(evaluated), "positive": sum(truth), "tp": tp, "fp": fp,
@@ -126,6 +140,23 @@ def build_report(rows: list[dict], metadata: dict[str, str]) -> str:
             f"| {name} | {metric['n']} | {metric['tp']} | {metric['fp']} | {metric['fn']} | "
             f"{metric['tn']} | {precision} | {recall} | {p_at_10} (k={metric['k']}) |"
         )
+    unlabeled_top = [
+        row
+        for row in rows
+        if not (row.get("human_label") or "").strip()
+        and (row.get("example") or "").strip().lower() != "true"
+        and (row.get("rank") or "").strip()
+        and _rank_of(row) <= 10
+    ]
+    if unlabeled_top:
+        lines.extend([
+            "",
+            "## Warnings",
+            "",
+            f"- **Precision@10 covers labeled rows only:** {len(unlabeled_top)} unlabeled "
+            "row(s) carry rank <= 10, so the true top-10 is partly unmeasured. "
+            "Label them before quoting Precision@10 as the top-10 figure.",
+        ])
     return "\n".join(lines) + "\n"
 
 

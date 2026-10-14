@@ -406,7 +406,7 @@ def test_sampler_empty_valid_capture_records_all_strata_unavailable(tmp_path):
 
 def test_sampler_parse_rejected_rows_leave_a_trace(tmp_path):
     out = tmp_path / "sheet.csv"
-    result = _run_sample(FIXTURES / "all_rows_rejected.csv", 12, 3, out)
+    result = _run_sample(FIXTURES / "parse_rejected_rows.csv", 12, 3, out)
     assert result.returncode == 0, result.stderr
     header, rows = _sheet(out)
     # The fixture's rows die at parse time, so no stratum can form; the
