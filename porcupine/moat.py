@@ -14,6 +14,21 @@ from .radar import opportunity_text
 
 # Primary signals are phrases the repo is allowed to claim. A generic word
 # such as "AI" or "drone" is deliberately absent so it cannot mint a moat.
+#
+# Scoping rule (2026-10-14, issue #8): a signal must name the component's
+# deliverable or method, not merely its topic. The labeled eval
+# (eval/labels.csv, machine labels; eval/LABELS-PROVENANCE.md) falsified the
+# bare topic nouns: every one of the 14 predicted fits was judged no-fit, and
+# 13 of the 14 were minted by the single bare word "certification" firing on
+# bundled or incidental language (a trainer certifying its own trainees,
+# certification activities inside a refit contract, a bidder's eligibility
+# certification form, a labour-category title, certification explicitly
+# excluded from scope). The fourteenth was the bare adjective "adversarial"
+# firing on geopolitical prose ("adversarial grand strategies"), not on any
+# testing method. Bare "certification", "conformance", "attestation", and
+# "adversarial" are therefore gone; what remains names the work itself:
+# conformity/conformance assessment, certification/accreditation/attestation
+# services, adversarial testing. The fit steps did not move.
 PORTFOLIO = (
     {
         "name": "interlock",
@@ -56,7 +71,10 @@ PORTFOLIO = (
         "primaries": (
             "red-team",
             "red team",
-            "adversarial",
+            "adversarial testing",
+            "adversarial test",
+            "adversarial evaluation",
+            "adversarial assessment",
         ),
     },
     {
@@ -65,9 +83,17 @@ PORTFOLIO = (
         "primaries": (
             "compliance-by-design",
             "compliance by design",
-            "certification",
-            "conformance",
-            "attestation",
+            "conformity assessment",
+            "conformance assessment",
+            "conformance testing",
+            "certification services",
+            "accreditation services",
+            "attestation services",
+            "remote attestation",
+            "independent verification",
+            "verification and validation",
+            "third-party certification",
+            "third party certification",
         ),
     },
     {
