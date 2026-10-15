@@ -1,6 +1,6 @@
 # PORCUPINE performance increment — independent verification
 
-Worktree: `<worktree>` (branch `cursor/porcupine-trustworthy-radar`).
+Worktree: `<worktree>` (the trustworthy-radar feature branch).
 Live checkout `<live-checkout>` untouched, clean, at `b7ff5a2`. No deploy, no cron change, no commit.
 
 ## 1. The threat: silent quadratic
