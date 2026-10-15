@@ -1,6 +1,6 @@
 # Contributing to PORCUPINE
 
-PORCUPINE is a read-only radar for Canada's defence and dual-use tender market. Contributions are welcome — especially the ones listed as [good first issues](https://github.com/marsojuji-cmyk/porcupine/labels/good%20first%20issue).
+PORCUPINE is a read-only radar for Canada's defence and dual-use tender market. Contributions are welcome — especially the ones listed as [good first issues](https://github.com/FetchDoge/porcupine/labels/good%20first%20issue).
 
 ## The one rule that outranks the others
 
