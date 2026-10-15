@@ -1,7 +1,7 @@
 # PORCUPINE performance increment — independent verification
 
-Worktree: `~/.hermes/profiles/rig/workspace/porcupine-trustworthy-radar` (branch `cursor/porcupine-trustworthy-radar`).
-Live checkout `/Users/user/.hermes/workspace/porcupine-build` untouched, clean, at `b7ff5a2`. No deploy, no cron change, no commit.
+Worktree: `<worktree>` (the trustworthy-radar feature branch).
+Live checkout `<live-checkout>` untouched, clean, at `b7ff5a2`. No deploy, no cron change, no commit.
 
 ## 1. The threat: silent quadratic
 

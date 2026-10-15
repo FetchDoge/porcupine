@@ -1,6 +1,6 @@
 # Trustworthy radar — fix-back report
 
-**Worktree:** `/Users/user/.hermes/profiles/rig/workspace/porcupine-trustworthy-radar`
+**Worktree:** `<worktree>`
 **Scope:** Fix-back per independent verifier (`FIXBACK-BRIEF.md`); no commit/push/cutover.
 
 Every defect below is a way the radar could lie. Each fix is the mechanism that stops it.
@@ -83,21 +83,21 @@ Feed-level fields in `feeds.json` mirror the same acquisition; each scored oppor
 ## Verifier commands (rig — profile scratch roots)
 
 ```bash
-cd /Users/user/.hermes/profiles/rig/workspace/porcupine-trustworthy-radar
+cd <worktree>
 
 python3 -m pytest tests/ -q
 
 python3 -m porcupine.cli replay-csv \
   --file source-evidence/canadabuys-reference.csv \
-  --root /Users/user/.hermes/profiles/rig/cache/scratch/porcupine-trustworthy-radar-fixture
+  --root <scratch-dir>/porcupine-trustworthy-radar-fixture
 
 python3 -m porcupine.cli replay-csv \
-  --file /Users/user/.hermes/profiles/rig/cache/scratch/porcupine-source-discovery/open-tenders.csv \
-  --root /Users/user/.hermes/profiles/rig/cache/scratch/porcupine-trustworthy-radar-replay
+  --file <scratch-dir>/porcupine-source-discovery/open-tenders.csv \
+  --root <scratch-dir>/porcupine-trustworthy-radar-replay
 # Expect raw/valid/unique derived from file (878 rows at current capture); shown≤40 when shortlist applies
 
 python3 -m porcupine.cli run \
-  --root /Users/user/.hermes/profiles/rig/cache/scratch/porcupine-trustworthy-radar-live \
+  --root <scratch-dir>/porcupine-trustworthy-radar-live \
   --source canadabuys-open-tenders-csv
 ```
 
@@ -118,7 +118,7 @@ python3 -m porcupine.cli run \
 Rig must run (builder shell could not execute pytest this session):
 
 ```bash
-cd /Users/user/.hermes/profiles/rig/workspace/porcupine-trustworthy-radar
+cd <worktree>
 python3 -m pytest tests/test_trustworthy_radar.py tests/test_porcupine.py -q
 ```
 

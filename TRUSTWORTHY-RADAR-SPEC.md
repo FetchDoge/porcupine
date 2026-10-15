@@ -8,10 +8,10 @@ attached — the spec is a list of things that must not be allowed to happen,
 each paired with what stops it.
 
 ## Authority / routing
-Marc explicitly authorized following the fresh 6.1-sol recommendation and iterative development. This authorizes code in this isolated worktree, NOT live cutover, automatic submissions, spend, credential changes, gateway changes, or unrestricted expansion. Architect/verifier = rig; builder = Cursor. Existing DESIGN-v2/ALGORITHM/DEEP-DESIGN are historical proposals, NOT implementation requirements. This spec supersedes them for this increment.
+Marcus approved this approach and iterative development. This authorizes code in this isolated worktree, NOT live cutover, automatic submissions, spend, credential changes, gateway changes, or unrestricted expansion. Architect/verifier = rig; a separate builder writes the code. Existing DESIGN-v2/ALGORITHM/DEEP-DESIGN are historical proposals, NOT implementation requirements. This spec supersedes them for this increment.
 
 ## Read first
-porcupine/radar.py, config.py, cli.py, scoring.py, ledger.py, tests/test_porcupine.py, source-evidence/capture.json, source-evidence/canadabuys-reference.csv. Fresh reassessment at /Users/user/.hermes/profiles/rig/workspace/PORCUPINE-6.1-SOL-REASSESSMENT.md is read-only rationale. Check git status/log before editing. Base b7ff5a2; original live checkout /Users/user/.hermes/workspace/porcupine-build must remain untouched. Work only here.
+porcupine/radar.py, config.py, cli.py, scoring.py, ledger.py, tests/test_porcupine.py, source-evidence/capture.json, source-evidence/canadabuys-reference.csv. Fresh reassessment at the separate reassessment notes is read-only rationale. Check git status/log before editing. Base b7ff5a2; original live checkout <live-checkout> must remain untouched. Work only here.
 
 ## Goal
 Give PORCUPINE trustworthy eyes: machine-readable primary-source intake, truthful coverage accounting and provenance, without adding a learning engine or silently suppressing unfamiliar candidates.
@@ -57,7 +57,7 @@ Direct fetches of IDEaS competitive-projects index and two challenge pages timed
 *Mechanism:* replace fact-overclaims in report text; leave original historical design/review docs intact. Add report disclaimer that eligibility, certification readiness and commercial moat remain unverified.
 
 ## Tests / verifier acceptance
-Cursor authors tests; rig runs them. Never say tests passed if shell denied.
+Tests are written first; the rig runs them. Never say tests passed if shell denied.
 - Existing 22 regression tests remain green.
 - Fixture parser preserves expected reference/solicitation/close fields from REAL captured CSV, including multiline and accented text; missing detail URL is unknown, source dataset link preserved.
 - A real fixture row outside keyword lens remains an intake record or is explicitly accounted for, not silently lost.
