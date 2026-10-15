@@ -15,10 +15,10 @@ execution trace. Where verification stops, the boundary is stated, not implied.
 - Independently parsed opportunity ledger: 878 opportunity records, each carrying acquisition timestamp, text digest, source body and metadata snapshot references. Stored snapshot SHA-256 matched feed and metadata digest; metadata source ID matched acquisition feed.
 - Repeated same-root run: exit 0; acquisition marked cache, live_fetch false; one body snapshot reused; 878 candidates; draft null; ledger appended 0, already_recorded 1756.
 - `git diff --check`: no whitespace errors.
-- Live checkout `/Users/user/.hermes/workspace/porcupine-build`: clean status; no cutover performed.
+- Live checkout `<live-checkout>`: clean status; no cutover performed.
 
 ## Receipts
-Runtime evidence root: `/Users/user/.hermes/profiles/rig/cache/scratch/porcupine-radar-receipted-final` (temporary scratch, not permanent archive).
+Runtime evidence root: `<scratch-dir>/porcupine-radar-receipted-final` (temporary scratch, not permanent archive).
 Execution logs in this worktree: `live-receipted-final.log`, `cache-receipted-final.log`.
 Builder implementation report: `TRUSTWORTHY-RADAR-REPORT.md`.
 

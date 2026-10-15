@@ -101,12 +101,12 @@ Each finding is a failure the current code permits. Each amendment is the mechan
 ## Verifier commands (rig; not executed in this review)
 
 ```text
-cd /Users/user/.hermes/profiles/rig/workspace/porcupine-trustworthy-radar
+cd <worktree>
 python3 -m unittest discover -s tests -p 'test_*.py' -v
 
 # After implementation — offline full capture replay (spec path)
 python3 -m porcupine.cli replay-csv \
-  --file /Users/user/.hermes/profiles/rig/cache/scratch/porcupine-source-discovery/open-tenders.csv \
+  --file <scratch-dir>/porcupine-source-discovery/open-tenders.csv \
   --root /tmp/porcupine-replay-root
 
 # Fixture subset (repo)
@@ -147,8 +147,8 @@ Adjust CLI names to match implemented subcommand; contract is isolated `--root`,
     "operator report copy"
   ],
   "verifier_commands": [
-    "cd /Users/user/.hermes/profiles/rig/workspace/porcupine-trustworthy-radar && python3 -m unittest discover -s tests -p 'test_*.py' -v",
-    "python3 -m porcupine.cli replay-csv --file /Users/user/.hermes/profiles/rig/cache/scratch/porcupine-source-discovery/open-tenders.csv --root /tmp/porcupine-replay-root",
+    "cd <worktree> && python3 -m unittest discover -s tests -p 'test_*.py' -v",
+    "python3 -m porcupine.cli replay-csv --file <scratch-dir>/porcupine-source-discovery/open-tenders.csv --root /tmp/porcupine-replay-root",
     "python3 -m porcupine.cli replay-csv --file source-evidence/canadabuys-reference.csv --root /tmp/porcupine-fixture-replay",
     "python3 -m porcupine.cli run --root /tmp/porcupine-live-csv-run"
   ]
