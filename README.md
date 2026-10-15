@@ -104,4 +104,10 @@ PORCUPINE is operated under a standing protocol by its Keeper — maintainer and
 
 *Built to watch the market without lying about what it saw.*
 
+## License
+
+Code: MIT. Copyright (c) 2026 Marcus Richards. See [LICENSE](LICENSE).
+
+Data: the CanadaBuys tender notices in `source-evidence/` come from Public Services and Procurement Canada ([CanadaBuys tender notices](https://open.canada.ca/data/en/dataset/6abd20d4-7a1c-4b38-baa2-9525d0bb2fd2)). Contains information licensed under the [Open Government Licence – Canada](https://open.canada.ca/en/open-government-licence-canada). That data is not covered by this repository's MIT license.
+
 Built by Marcus Richards, directing AI coding agents.
