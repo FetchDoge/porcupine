@@ -103,3 +103,5 @@ PORCUPINE is operated under a standing protocol by its Keeper — maintainer and
 ---
 
 *Built to watch the market without lying about what it saw.*
+
+Built by Marcus Richards, directing AI coding agents.
