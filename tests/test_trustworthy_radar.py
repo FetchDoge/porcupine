@@ -5,6 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import os
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -34,7 +35,7 @@ from porcupine import config
 FIXTURES = Path(__file__).parent / "fixtures"
 REFERENCE_CSV = Path(__file__).resolve().parents[1] / "source-evidence" / "canadabuys-reference.csv"
 RIG_FULL_CSV = Path(
-    "/Users/user/.hermes/profiles/rig/cache/scratch/porcupine-source-discovery/open-tenders.csv"
+    os.environ.get("PORCUPINE_RIG_FULL_CSV", "/nonexistent/open-tenders.csv")
 )
 
 
