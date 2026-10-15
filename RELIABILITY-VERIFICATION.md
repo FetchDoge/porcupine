@@ -1,6 +1,6 @@
 # PORCUPINE ledger concurrency — reliability verification (issue #4)
 
-Tree: `~/workspace/porcupine-fleet/reliability`. No production code changed; no commit.
+Tree: a local reliability worktree. No production code changed; no commit.
 Environment: Python 3.12.3, Linux 7.0.0-39-generic x86_64, 2 CPUs, local btrfs volume.
 
 ## 1. The threat: an asserted lock, never load-tested
